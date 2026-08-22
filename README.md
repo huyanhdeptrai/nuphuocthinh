@@ -43,10 +43,26 @@ Installer `.exe` được tạo trong `apps/desktop/dist/`. Bản phát hành s�
 
 ## Đóng góp và ủng hộ
 
-Nếu dự án hữu ích, bạn có thể ủng hộ để duy trì và phát triển thêm tính năng:
+> 🎉 Fun fact: dự án này **chưa từng nhận được donate**. Nếu nó đã giúp bạn đỡ mất công làm video, một ly cà phê nhỏ sẽ là động lực rất lớn để tiếp tục sửa bug và thêm tính năng.
 
-- VPBank: **275250597**
-- MoMo: **0335127075**
+Quét QR phù hợp với ứng dụng bạn dùng:
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <strong>MoMo</strong><br />
+      <img src="apps/web/public/donate/momo-qr.png" alt="QR ủng hộ MoMo" width="260" /><br />
+      <code>0335127075</code>
+    </td>
+    <td align="center" width="50%">
+      <strong>VPBank</strong><br />
+      <img src="apps/web/public/donate/vpbank-qr.png" alt="QR ủng hộ VPBank" width="260" /><br />
+      <code>275250597</code>
+    </td>
+  </tr>
+</table>
+
+Cảm ơn anh/chị đã ủng hộ — dù là donate, góp ý, hay một ý tưởng hay để cùng vibe code. 💛
 
 ## Ghi nhận mã nguồn và giấy phép
 
