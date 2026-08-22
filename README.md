@@ -20,6 +20,12 @@ Lemyloi-dichvideos lấy mã nguồn từ [Editkub](https://github.com/9teeedev/
 
 Đây là mã nguồn mở để bạn có thể **vibe code**: tự tạo ngôn ngữ phù hợp với mình, điều chỉnh giao diện/quy trình làm việc, hoặc bổ sung bất kỳ chức năng nào cần cho dự án video.
 
+## Demo
+
+Timeline đa lớp với phụ đề gốc, bản dịch, vùng che subtitle và các track thuyết minh/TTS:
+
+![Demo Lemyloi-dichvideos editor](apps/web/public/demo/editor-workflow.png)
+
 ## Cài đặt nhanh
 
 Yêu cầu: [Bun](https://bun.sh/) và Node.js tương thích.
