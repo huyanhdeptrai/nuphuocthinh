@@ -10,14 +10,14 @@ export const baseMetaData: Metadata = {
 		description: SITE_INFO.description,
 		url: SITE_URL,
 		siteName: SITE_INFO.title,
-		locale: "en_US",
+		locale: "vi_VN",
 		type: "website",
 		images: [
 			{
 				url: SITE_INFO.openGraphImage,
 				width: 1200,
 				height: 630,
-				alt: "Editkub Wordmark",
+				alt: "Lemyloi-dichvideo Wordmark",
 			},
 		],
 	},
@@ -25,7 +25,7 @@ export const baseMetaData: Metadata = {
 		card: "summary_large_image",
 		title: SITE_INFO.title,
 		description: SITE_INFO.description,
-		creator: "@editkub",
+		creator: "@lemyloi-dichvideo",
 		images: [SITE_INFO.twitterImage],
 	},
 	pinterest: {
@@ -36,8 +36,8 @@ export const baseMetaData: Metadata = {
 		follow: true,
 	},
 	icons: {
-		icon: [{ url: "/logos/editkub/svg/logo.svg", type: "image/svg+xml" }],
-		shortcut: ["/logos/editkub/svg/logo.svg"],
+		icon: [{ url: "/logos/lemyloi-dichvideo/logo.png", type: "image/png" }],
+		shortcut: ["/logos/lemyloi-dichvideo/logo.png"],
 	},
 	appleWebApp: {
 		capable: true,
@@ -45,20 +45,7 @@ export const baseMetaData: Metadata = {
 	},
 	manifest: "/manifest.json",
 	alternates: {
-		languages: {
-			en: "/en",
-			zh: "/zh",
-			ja: "/ja",
-			ko: "/ko",
-			es: "/es",
-			pt: "/pt",
-			fr: "/fr",
-			de: "/de",
-			id: "/id",
-			vi: "/vi",
-			ru: "/ru",
-			it: "/it",
-		},
+		languages: { vi: "/vi" },
 	},
 	verification: {
 		google: "2vT5_zr_I5KwYWIwZeIrfaZNOCFzG5iUpVPhGHiMXas",

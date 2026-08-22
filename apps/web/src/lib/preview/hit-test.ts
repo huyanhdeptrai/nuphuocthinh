@@ -22,12 +22,14 @@ function isPointInRotatedRect({
 	halfWidth,
 	halfHeight,
 	rotationDeg,
+	padding = 16,
 }: {
 	point: { x: number; y: number };
 	center: { x: number; y: number };
 	halfWidth: number;
 	halfHeight: number;
 	rotationDeg: number;
+	padding?: number;
 }): boolean {
 	const rad = (-rotationDeg * Math.PI) / 180;
 	const cos = Math.cos(rad);
@@ -37,7 +39,10 @@ function isPointInRotatedRect({
 	const localX = dx * cos - dy * sin;
 	const localY = dx * sin + dy * cos;
 
-	return Math.abs(localX) <= halfWidth && Math.abs(localY) <= halfHeight;
+	return (
+		Math.abs(localX) <= halfWidth + padding &&
+		Math.abs(localY) <= halfHeight + padding
+	);
 }
 
 /**

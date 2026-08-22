@@ -30,13 +30,13 @@ export function Onboarding() {
 	const getStepTitle = () => {
 		switch (step) {
 			case 0:
-				return t('Welcome to Editkub Beta! 🎉');
+				return t('Welcome to Lemyloi-dichvideo Beta! 🎉');
 			case 1:
 				return t('⚠️ This is a super early beta!');
 			case 2:
 				return t('🦋 Have fun testing!');
 			default:
-				return t('Editkub Onboarding');
+				return t('Lemyloi-dichvideo Onboarding');
 		}
 	};
 
@@ -46,8 +46,8 @@ export function Onboarding() {
 				return (
 					<div className="space-y-5">
 						<div className="space-y-3">
-						<Title title={t('Welcome to Editkub Beta! 🎉')} />
-						<Description description={t("You're among the first to try Editkub - the fully open source CapCut alternative.")} />
+						<Title title={t('Welcome to Lemyloi-dichvideo Beta! 🎉')} />
+						<Description description={t("You're among the first to try Lemyloi-dichvideo - the fully open source CapCut alternative.")} />
 						</div>
 						<NextButton onClick={handleNext}>{t('Next')}</NextButton>
 					</div>
@@ -59,7 +59,7 @@ export function Onboarding() {
 							<Title title={getStepTitle()} />
 							<Description description={t("There's still a ton of things to do to make this editor amazing.")} />
 							<Description description={t("A lot of features are still missing. We're working hard to build them out!")} />
-							<Description description={t("If you're curious, check out our roadmap [here](https://editkub.vercel.app/roadmap)")} />
+							<Description description={t("If you're curious, check out our roadmap [here](https://lemyloi-dichvideo.vercel.app/roadmap)")} />
 						</div>
 						<NextButton onClick={handleNext}>{t('Next')}</NextButton>
 					</div>
@@ -70,7 +70,7 @@ export function Onboarding() {
 						<div className="space-y-3">
 							<Title title={getStepTitle()} />
 							<Description
-								description={t('Join our [Discord]({{url}}), chat with cool people and share feedback to help make Editkub the best editor ever.', { url: SOCIAL_LINKS.discord })}
+								description={t('Join our [Discord]({{url}}), chat with cool people and share feedback to help make Lemyloi-dichvideo the best editor ever.', { url: SOCIAL_LINKS.discord })}
 							/>
 						</div>
 						<NextButton onClick={handleClose}>{t('Finish')}</NextButton>

@@ -14,26 +14,28 @@ import { DeleteProjectDialog } from "./dialogs/delete-project-dialog";
 import { useRouter } from "@/lib/navigation";
 import { ExportButton } from "./export-button";
 import { ThemeToggle } from "../theme-toggle";
-import { LanguageToggle } from "../language-toggle";
 import { DEFAULT_LOGO_URL } from "@/constants/site-constants";
 import { toast } from "sonner";
 import { useEditor } from "@/hooks/use-editor";
 import {
 	ArrowLeft02Icon,
-	BubbleChatIcon,
+	ClosedCaptionIcon,
 	CommandIcon,
 	SparklesIcon,
-	PencilIcon,
 	OrientationLandscapeToPotraitIcon,
 	OrientationPotraitToLandscapeIcon,
 } from "@hugeicons/core-free-icons";
-import { FeedbackTrigger } from "@/components/feedback/feedback-trigger";
+import {
+	Undo2,
+	Redo2,
+} from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ShortcutsDialog } from "./dialogs/shortcuts-dialog";
 import Image from "next/image";
 import { cn } from "@/utils/ui";
 import { useTranslation } from "@i18next-toolkit/nextjs-approuter";
 import { useAgentStore } from "@/stores/agent-store";
+import { usePanelStore } from "@/stores/panel-store";
 import {
 	VERTICAL_CANVAS_SIZE,
 	LANDSCAPE_CANVAS_SIZE,
@@ -42,30 +44,66 @@ import {
 export function EditorHeader() {
 	const { t } = useTranslation();
 	return (
-		<header className="bg-background flex h-[3.4rem] items-center justify-between px-3 pt-0.5">
-			<div className="flex items-center gap-1">
+		<header className="bg-background flex h-[3.4rem] items-center justify-between px-3 pt-0.5 border-b border-border/40">
+			<div className="flex items-center gap-1 min-w-0">
 				<ProjectDropdown />
 				<EditableProjectName />
 			</div>
-			<nav className="flex items-center gap-2">
-				<FeedbackTrigger>
-					<Button
-						type="button"
-						variant="ghost"
-						size="icon"
-						aria-label={t("Feedback")}
-						title={t("Feedback")}
-					>
-						<HugeiconsIcon icon={BubbleChatIcon} className="size-4" />
-					</Button>
-				</FeedbackTrigger>
-				<LanguageToggle />
+
+			<nav className="flex items-center gap-1.5">
+				<UndoRedoControls />
 				<ThemeToggle />
 				<LayoutToggle />
+				<SubtitlesToggle />
 				<AgentToggle />
 				<ExportButton />
 			</nav>
 		</header>
+	);
+}
+
+
+function UndoRedoControls() {
+	const { t } = useTranslation();
+	const editor = useEditor();
+
+	const handleUndo = () => {
+		try {
+			editor.command.undo();
+		} catch (e) {
+			console.warn("Undo failed:", e);
+		}
+	};
+
+	const handleRedo = () => {
+		try {
+			editor.command.redo();
+		} catch (e) {
+			console.warn("Redo failed:", e);
+		}
+	};
+
+	return (
+		<div className="flex items-center gap-0.5">
+			<Button
+				variant="ghost"
+				size="icon"
+				onClick={handleUndo}
+				title={t("Hoàn tác (Ctrl+Z)")}
+				className="size-8 text-muted-foreground hover:text-foreground"
+			>
+				<Undo2 className="size-4" />
+			</Button>
+			<Button
+				variant="ghost"
+				size="icon"
+				onClick={handleRedo}
+				title={t("Làm lại (Ctrl+Y)")}
+				className="size-8 text-muted-foreground hover:text-foreground"
+			>
+				<Redo2 className="size-4" />
+			</Button>
+		</div>
 	);
 }
 
@@ -262,6 +300,25 @@ function EditableProjectName() {
 				isEditing && "ring-1 ring-ring cursor-text hover:bg-transparent",
 			)}
 		/>
+	);
+}
+
+function SubtitlesToggle() {
+	const { t } = useTranslation();
+	const isOpen = usePanelStore((state) => state.isSubtitlesOpen);
+	const togglePanel = usePanelStore((state) => state.toggleSubtitlesPanel);
+
+	return (
+		<Button
+			variant={isOpen ? "secondary" : "ghost"}
+			size="icon"
+			onClick={togglePanel}
+			title={t("Subtitles")}
+			aria-label={t("Subtitles")}
+			className="size-8"
+		>
+			<HugeiconsIcon icon={ClosedCaptionIcon} className="size-4" />
+		</Button>
 	);
 }
 

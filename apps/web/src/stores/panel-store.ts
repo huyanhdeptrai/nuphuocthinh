@@ -8,6 +8,7 @@ export interface PanelSizes {
 	properties: number;
 	mainContent: number;
 	timeline: number;
+	subtitles: number;
 	agent: number;
 }
 
@@ -15,8 +16,10 @@ export type PanelId = keyof PanelSizes;
 
 interface PanelState {
 	panels: PanelSizes;
+	isSubtitlesOpen: boolean;
 	setPanel: (panel: PanelId, size: number) => void;
 	setPanels: (sizes: Partial<PanelSizes>) => void;
+	toggleSubtitlesPanel: () => void;
 	resetPanels: () => void;
 }
 
@@ -24,6 +27,7 @@ export const usePanelStore = create<PanelState>()(
 	persist(
 		(set) => ({
 			...PANEL_CONFIG,
+			isSubtitlesOpen: true,
 			setPanel: (panel, size) =>
 				set((state) => ({
 					panels: {
@@ -38,11 +42,13 @@ export const usePanelStore = create<PanelState>()(
 						...sizes,
 					},
 				})),
+			toggleSubtitlesPanel: () =>
+				set((state) => ({ isSubtitlesOpen: !state.isSubtitlesOpen })),
 			resetPanels: () => set({ ...PANEL_CONFIG }),
 		}),
 		{
 			name: "panel-sizes",
-			version: 2,
+			version: 3,
 			migrate: (persistedState) => {
 				const state = persistedState as
 					| {
@@ -51,7 +57,8 @@ export const usePanelStore = create<PanelState>()(
 							previewPanel?: number;
 							propertiesPanel?: number;
 							mainContent?: number;
-							timeline?: number;
+						timeline?: number;
+						subtitles?: number;
 							tools?: number;
 							preview?: number;
 							properties?: number;
@@ -83,11 +90,13 @@ export const usePanelStore = create<PanelState>()(
 							PANEL_CONFIG.panels.properties,
 						mainContent: state.mainContent ?? PANEL_CONFIG.panels.mainContent,
 						timeline: state.timeline ?? PANEL_CONFIG.panels.timeline,
+						subtitles: state.subtitles ?? PANEL_CONFIG.panels.subtitles,
 					},
 				};
 			},
 			partialize: (state) => ({
 				panels: state.panels,
+				isSubtitlesOpen: state.isSubtitlesOpen,
 			}),
 		},
 	),

@@ -211,6 +211,68 @@ export class InsertElementCommand extends Command {
 				return null;
 			}
 
+			const elementEndTime = element.startTime + element.duration;
+			const hasOverlap = wouldElementOverlap({
+				elements: targetTrack.elements,
+				startTime: element.startTime,
+				endTime: elementEndTime,
+			});
+
+			// If target track already has overlapping elements at this time, avoid stacking on the same line
+			if (hasOverlap) {
+				const nonOverlappingTrack = tracks.find(
+					(track) =>
+						canElementGoOnTrack({
+							elementType: element.type,
+							trackType: track.type,
+						}) &&
+						!wouldElementOverlap({
+							elements: track.elements,
+							startTime: element.startTime,
+							endTime: elementEndTime,
+						}),
+				);
+
+				if (nonOverlappingTrack) {
+					const adjustedElement = this.adjustElementForMainTrack({
+						tracks,
+						targetTrackId: nonOverlappingTrack.id,
+						element,
+					});
+
+					const updatedTracks = tracks.map((track) =>
+						track.id === nonOverlappingTrack.id
+							? {
+									...track,
+									elements: [...track.elements, adjustedElement],
+								}
+							: track,
+					) as TimelineTrack[];
+
+					return { updatedTracks, targetTrackId: nonOverlappingTrack.id };
+				}
+
+				// No free non-overlapping track found -> create a new track of this type!
+				const newTrackId = generateUUID();
+				const newTrack = buildEmptyTrack({
+					id: newTrackId,
+					type: targetTrack.type,
+				});
+				const newTrackWithElement = {
+					...newTrack,
+					elements: [...newTrack.elements, element],
+				} as TimelineTrack;
+
+				const updatedTracks = [...tracks];
+				const insertIndex = this.getAutoInsertIndex({
+					tracks: updatedTracks,
+					trackType: targetTrack.type,
+				});
+				updatedTracks.splice(insertIndex, 0, newTrackWithElement);
+
+				return { updatedTracks, targetTrackId: newTrackId };
+			}
+
 			const adjustedElement = this.adjustElementForMainTrack({
 				tracks,
 				targetTrackId: targetTrack.id,
@@ -309,6 +371,18 @@ export class InsertElementCommand extends Command {
 		trackType: TrackType;
 	}): number {
 		if (trackType === "text") {
+			const firstVideoTrackIndex = tracks.findIndex(
+				(track) => track.type === "video",
+			);
+			if (firstVideoTrackIndex >= 0) {
+				return firstVideoTrackIndex;
+			}
+		}
+
+		// Effect tracks (blur-effect, etc.) must render AFTER the video is drawn,
+		// which means they must be inserted ABOVE (lower index) the video track.
+		// We insert right above the topmost video track.
+		if (trackType === "effect") {
 			const firstVideoTrackIndex = tracks.findIndex(
 				(track) => track.type === "video",
 			);

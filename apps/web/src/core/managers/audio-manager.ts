@@ -1,6 +1,14 @@
 import type { EditorCore } from "@/core";
 import type { AudioClipSource } from "@/lib/media/audio";
 import { createAudioContext, collectAudioClips } from "@/lib/media/audio";
+import { resolveDuckMix } from "@/dubbing/adapters/duck-mix";
+import {
+	DUCK_ATTACK_MS,
+	DUCK_RELEASE_MS,
+	gainAtTime,
+	isDuckingCandidateRole,
+	type DuckWindow,
+} from "@/dubbing/services/duck-envelope";
 
 export class AudioManager {
 	private audioContext: AudioContext | null = null;
@@ -26,6 +34,7 @@ export class AudioManager {
 		);
 		if (typeof window !== "undefined") {
 			window.addEventListener("playback-seek", this.handleSeek);
+			window.addEventListener("playback-rate-change", this.handleRateChange);
 		}
 	}
 
@@ -41,6 +50,7 @@ export class AudioManager {
 		this.unsubscribers = [];
 		if (typeof window !== "undefined") {
 			window.removeEventListener("playback-seek", this.handleSeek);
+			window.removeEventListener("playback-rate-change", this.handleRateChange);
 		}
 		this.decodedBuffers.clear();
 		if (this.audioContext) {
@@ -48,6 +58,13 @@ export class AudioManager {
 			this.audioContext = null;
 			this.masterGain = null;
 		}
+	}
+
+	refreshScheduledClips(): void {
+		if (!this.editor.playback.getIsPlaying()) return;
+		void this.startPlayback({
+			time: this.editor.playback.getCurrentTime(),
+		});
 	}
 
 	private handlePlaybackChange = (): void => {
@@ -86,6 +103,13 @@ export class AudioManager {
 		}
 
 		this.stopPlayback();
+	};
+
+	private handleRateChange = (): void => {
+		if (!this.editor.playback.getIsPlaying()) return;
+		void this.startPlayback({
+			time: this.editor.playback.getCurrentTime(),
+		});
 	};
 
 	private handleTimelineChange = (): void => {
@@ -191,35 +215,44 @@ export class AudioManager {
 		const audioContext = this.audioContext;
 		if (!audioContext || !this.masterGain) return;
 
-		const rate = clip.playbackRate;
+		const playbackSpeed =
+			typeof this.editor.playback.getPlaybackRate === "function"
+				? this.editor.playback.getPlaybackRate()
+				: 1;
+		const effectiveRate = clip.playbackRate * playbackSpeed;
 		const elapsed = Math.max(0, time - clip.startTime);
-		const sourceOffset = clip.trimStart + elapsed * rate;
-		const remainingDuration = clip.duration - elapsed;
+		const sourceOffset = clip.trimStart + elapsed * clip.playbackRate;
+		const remainingBufferSec = clip.duration - elapsed;
 
-		if (remainingDuration <= 0) return;
+		if (remainingBufferSec <= 0) return;
 
 		const timelineStart = Math.max(clip.startTime, time);
 		const scheduleTime =
 			this.playbackStartContextTime +
-			(timelineStart - this.playbackStartTime);
+			(timelineStart - this.playbackStartTime) / playbackSpeed;
 
 		const node = audioContext.createBufferSource();
 		node.buffer = buffer;
-		node.playbackRate.value = rate;
+		node.playbackRate.value = effectiveRate;
 
 		const clipGain = audioContext.createGain();
-		clipGain.gain.value = clip.volume;
+		this.applyClipGainEnvelope({
+			clipGain,
+			clip,
+			fromTime: timelineStart,
+		});
 		node.connect(clipGain);
 		clipGain.connect(this.masterGain);
 
 		if (scheduleTime >= audioContext.currentTime) {
-			node.start(scheduleTime, sourceOffset, remainingDuration);
+			node.start(scheduleTime, sourceOffset, remainingBufferSec);
 		} else {
-			const late = audioContext.currentTime - scheduleTime;
-			const adjustedOffset = sourceOffset + late * rate;
-			const adjustedDuration = remainingDuration - late;
-			if (adjustedDuration > 0) {
-				node.start(audioContext.currentTime, adjustedOffset, adjustedDuration);
+			const lateContextSec = audioContext.currentTime - scheduleTime;
+			const lateBufferSec = lateContextSec * effectiveRate;
+			const adjustedOffset = sourceOffset + lateBufferSec;
+			const adjustedBufferSec = remainingBufferSec - lateBufferSec;
+			if (adjustedBufferSec > 0) {
+				node.start(audioContext.currentTime, adjustedOffset, adjustedBufferSec);
 			} else {
 				return;
 			}
@@ -230,6 +263,82 @@ export class AudioManager {
 			node.disconnect();
 			this.queuedSources.delete(node);
 		});
+	}
+
+	private applyClipGainEnvelope({
+		clipGain,
+		clip,
+		fromTime,
+	}: {
+		clipGain: GainNode;
+		clip: AudioClipSource;
+		fromTime: number;
+	}): void {
+		const audioContext = this.audioContext;
+		if (!audioContext) return;
+
+		const duck = resolveDuckMix({
+			tracks: this.editor.timeline.getTracks(),
+		});
+		const shouldDuck = duck.enabled && isDuckingCandidateRole(clip.audioRole);
+		if (!shouldDuck || duck.windows.length === 0) {
+			clipGain.gain.value = clip.volume;
+			return;
+		}
+
+		const clipEnd = clip.startTime + clip.duration;
+		const points = collectDuckAutomationPoints({
+			windows: duck.windows,
+			fromTime,
+			toTime: clipEnd,
+			baseVolume: clip.volume,
+			duckVolume: duck.duckVolume,
+			attackMs: duck.attackMs ?? DUCK_ATTACK_MS,
+			releaseMs: duck.releaseMs ?? DUCK_RELEASE_MS,
+		});
+
+		if (points.length === 0) {
+			clipGain.gain.value = clip.volume;
+			return;
+		}
+
+		const playbackSpeed =
+			typeof this.editor.playback.getPlaybackRate === "function"
+				? this.editor.playback.getPlaybackRate()
+				: 1;
+		const now = audioContext.currentTime;
+		try {
+			clipGain.gain.cancelScheduledValues(now);
+		} catch {}
+
+		let lastTime = Math.max(
+			this.playbackStartContextTime +
+				(points[0].t - this.playbackStartTime) / playbackSpeed,
+			now,
+		);
+
+		try {
+			clipGain.gain.setValueAtTime(points[0].value, lastTime);
+		} catch {
+			clipGain.gain.value = points[0].value;
+		}
+
+		for (let i = 1; i < points.length; i++) {
+			const targetTime =
+				this.playbackStartContextTime +
+				(points[i].t - this.playbackStartTime) / playbackSpeed;
+			if (targetTime <= lastTime + 0.001) continue;
+
+			try {
+				clipGain.gain.linearRampToValueAtTime(points[i].value, targetTime);
+				lastTime = targetTime;
+			} catch {
+				try {
+					clipGain.gain.setValueAtTime(points[i].value, targetTime);
+					lastTime = targetTime;
+				} catch {}
+			}
+		}
 	}
 
 	private async getDecodedBuffer({
@@ -264,4 +373,52 @@ export class AudioManager {
 		}
 		this.queuedSources.clear();
 	}
+}
+
+function collectDuckAutomationPoints({
+	windows,
+	fromTime,
+	toTime,
+	baseVolume,
+	duckVolume,
+	attackMs,
+	releaseMs,
+}: {
+	windows: DuckWindow[];
+	fromTime: number;
+	toTime: number;
+	baseVolume: number;
+	duckVolume: number;
+	attackMs: number;
+	releaseMs: number;
+}): Array<{ t: number; value: number }> {
+	const attackSeconds = Math.max(0.01, attackMs / 1000);
+	const releaseSeconds = Math.max(0.01, releaseMs / 1000);
+	const times = new Set<number>([fromTime]);
+
+	for (const window of windows) {
+		const wStart = window.start;
+		const wStartPost = window.start + attackSeconds;
+		const wEnd = window.end;
+		const wEndPost = window.end + releaseSeconds;
+
+		if (wStart > fromTime && wStart < toTime) times.add(wStart);
+		if (wStartPost > fromTime && wStartPost < toTime) times.add(wStartPost);
+		if (wEnd > fromTime && wEnd < toTime) times.add(wEnd);
+		if (wEndPost > fromTime && wEndPost < toTime) times.add(wEndPost);
+	}
+
+	return [...times]
+		.sort((a, b) => a - b)
+		.map((t) => ({
+			t,
+			value: gainAtTime({
+				t,
+				duckWindows: windows,
+				baseVolume,
+				duckVolume,
+				attackMs,
+				releaseMs,
+			}),
+		}));
 }

@@ -10,7 +10,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
  * Unlike Captions (which transcribe all audio incl. sound effects for the
  * deaf/hard-of-hearing), Subtitles are translated dialogue text for viewers
  * who don't speak the source language. The full subtitle authoring flow is
- * not yet implemented in editkub-public; this view reserves the tab slot.
+ * not yet implemented in lemyloi-dichvideo-public; this view reserves the tab slot.
  */
 export function SubtitlesView() {
 	const { t } = useTranslation();

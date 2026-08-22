@@ -10,6 +10,8 @@ import type { RootNode } from "@/services/renderer/nodes/root-node";
 import { buildScene } from "@/services/renderer/scene-builder";
 import { getLastFrameTime } from "@/lib/time";
 import { invokeAction } from "@/lib/actions";
+import { usePlaybackFlags } from "@/hooks/use-playback";
+import { getPreviewRenderSize } from "@/lib/preview/preview-size";
 import { PauseIcon, PlayIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/utils/ui";
@@ -61,14 +63,6 @@ function MobilePreviewCanvas() {
 	const editor = useEditor();
 	const activeProject = editor.project.getActive();
 
-	const renderer = useMemo(() => {
-		return new CanvasRenderer({
-			width: nativeWidth,
-			height: nativeHeight,
-			fps: activeProject.settings.fps,
-		});
-	}, [nativeWidth, nativeHeight, activeProject.settings.fps]);
-
 	const displaySize = useMemo(() => {
 		if (
 			!nativeWidth ||
@@ -98,37 +92,74 @@ function MobilePreviewCanvas() {
 		return { width: displayWidth, height: displayHeight };
 	}, [nativeWidth, nativeHeight, containerSize.width, containerSize.height]);
 
+	const previewSize = useMemo(
+		() =>
+			getPreviewRenderSize({
+				nativeWidth: nativeWidth ?? 1,
+				nativeHeight: nativeHeight ?? 1,
+				displayWidth: displaySize.width,
+				displayHeight: displaySize.height,
+			}),
+		[nativeWidth, nativeHeight, displaySize.width, displaySize.height],
+	);
+
+	const renderer = useMemo(() => {
+		return new CanvasRenderer({
+			width: nativeWidth ?? previewSize.width,
+			height: nativeHeight ?? previewSize.height,
+			bufferWidth: previewSize.width,
+			bufferHeight: previewSize.height,
+			fps: activeProject.settings.fps,
+			quality: "preview",
+			previewMaxEdge: Math.max(previewSize.width, previewSize.height),
+		});
+	}, [
+		nativeWidth,
+		nativeHeight,
+		previewSize.width,
+		previewSize.height,
+		activeProject.settings.fps,
+	]);
+
 	const renderTree = editor.renderer.getRenderTree();
+	const renderTreeRef = useRef(renderTree);
+	renderTreeRef.current = renderTree;
+	const rendererRef = useRef(renderer);
+	rendererRef.current = renderer;
+	const editorRef = useRef(editor);
+	editorRef.current = editor;
+	lastFrameRef.current = -1;
 
 	const render = useCallback(() => {
-		if (canvasRef.current && renderTree && !renderingRef.current) {
-			const time = editor.playback.getCurrentTime();
-			const lastFrameTime = getLastFrameTime({
-				duration: renderTree.duration,
-				fps: renderer.fps,
-			});
-			const renderTime = Math.min(time, lastFrameTime);
-			const frame = Math.floor(renderTime * renderer.fps);
+		const canvas = canvasRef.current;
+		const tree = renderTreeRef.current;
+		const activeRenderer = rendererRef.current;
+		if (!canvas || !tree || renderingRef.current) return;
 
-			if (
-				frame !== lastFrameRef.current ||
-				renderTree !== lastSceneRef.current
-			) {
-				renderingRef.current = true;
-				lastSceneRef.current = renderTree;
-				lastFrameRef.current = frame;
-				renderer
-					.renderToCanvas({
-						node: renderTree,
-						time: renderTime,
-						targetCanvas: canvasRef.current,
-					})
-					.then(() => {
-						renderingRef.current = false;
-					});
-			}
+		const time = editorRef.current.playback.getCurrentTime();
+		const lastFrameTime = getLastFrameTime({
+			duration: tree.duration,
+			fps: activeRenderer.fps,
+		});
+		const renderTime = Math.min(time, lastFrameTime);
+		const frame = Math.floor(renderTime * activeRenderer.fps);
+
+		if (frame !== lastFrameRef.current || tree !== lastSceneRef.current) {
+			renderingRef.current = true;
+			lastSceneRef.current = tree;
+			lastFrameRef.current = frame;
+			activeRenderer
+				.renderToCanvas({
+					node: tree,
+					time: renderTime,
+					targetCanvas: canvas,
+				})
+				.catch(() => undefined)
+				.finally(() => {
+					renderingRef.current = false;
+				});
 		}
-	}, [renderer, renderTree, editor.playback]);
+	}, []);
 
 	useRafLoop(render);
 
@@ -139,18 +170,13 @@ function MobilePreviewCanvas() {
 		>
 			<canvas
 				ref={canvasRef}
-				width={nativeWidth}
-				height={nativeHeight}
+				width={previewSize.width}
+				height={previewSize.height}
 				className="block"
 				style={{
 					width: displaySize.width,
 					height: displaySize.height,
-					background:
-						activeProject.settings.background.type === "blur"
-							? "transparent"
-							: activeProject.settings.background.type === "gradient"
-								? activeProject.settings.background.css
-								: activeProject.settings.background.color,
+					background: "#000000",
 				}}
 			/>
 		</div>
@@ -158,8 +184,7 @@ function MobilePreviewCanvas() {
 }
 
 export function MobilePreview() {
-	const editor = useEditor();
-	const isPlaying = editor.playback.getIsPlaying();
+	const { isPlaying } = usePlaybackFlags();
 
 	const handleTogglePlay = useCallback(() => {
 		invokeAction("toggle-play");

@@ -26,9 +26,12 @@ export function TabBar() {
 		t("Text");
 		t("Stickers");
 		t("Effects");
+		t("Lớp phủ / Xoá");
 		t("Transitions");
-		t("Captions");
-		t("Subtitles");
+		t("Nhận Dạng Videos");
+		t("Dịch Thuật AI");
+		t("Kho Mẫu Giọng");
+		t("Thuyết minh");
 		t("Filters");
 		t("Adjustment");
 		t("AI");
@@ -71,6 +74,7 @@ export function TabBar() {
 			>
 				{TAB_KEYS.map((tabKey) => {
 					const tab = tabs[tabKey];
+					if (!tab) return null;
 					return (
 						<Tooltip key={tabKey} delayDuration={10}>
 							<TooltipTrigger asChild>
@@ -100,28 +104,12 @@ export function TabBar() {
 					);
 				})}
 			</div>
-
-			<FadeOverlay direction="top" show={showTopFade} />
-			<FadeOverlay direction="bottom" show={showBottomFade} />
-		</div>
-	);
-}
-
-function FadeOverlay({
-	direction,
-	show,
-}: {
-	direction: "top" | "bottom";
-	show: boolean;
-}) {
-	return (
-		<div
-			className={cn(
-				"pointer-events-none absolute right-0 left-0 h-6",
-				direction === "top" && show
-					? "from-background top-0 bg-gradient-to-b to-transparent"
-					: "from-background bottom-0 bg-gradient-to-t to-transparent",
+			{showTopFade && (
+				<div className="pointer-events-none absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-background to-transparent" />
 			)}
-		/>
+			{showBottomFade && (
+				<div className="pointer-events-none absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-background to-transparent" />
+			)}
+		</div>
 	);
 }

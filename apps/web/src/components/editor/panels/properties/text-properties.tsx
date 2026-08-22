@@ -14,7 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useReducer, useRef } from "react";
+import { useReducer, useRef, useState } from "react";
+import { toast } from "sonner";
 import { PanelBaseView } from "@/components/editor/panels/panel-base-view";
 import {
 	PropertyGroup,
@@ -34,10 +35,29 @@ import { DEFAULT_COLOR } from "@/constants/project-constants";
 import { MIN_FONT_SIZE, MAX_FONT_SIZE } from "@/constants/text-constants";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TextSpeechPanel } from "./text-speech-panel";
+import { OriginalSubtitleScanTab } from "./original-subtitle-scan-tab";
 import {
 	TEXT_STYLE_PRESETS,
 	type TextStylePreset,
 } from "@/constants/text-style-presets";
+import {
+	useCustomTextPresetsStore,
+	type CustomTextStylePreset,
+} from "@/stores/custom-text-presets-store";
+import {
+	syncSubtitleStyles,
+	isSubtitleTextElement,
+	getElementSpeakerInfo,
+} from "@/dubbing/services/subtitle-style-sync";
+import {
+	SparklesIcon,
+	UserIcon,
+	Bookmark02Icon,
+	PlusSignIcon,
+	Delete02Icon,
+	LayersIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/utils/ui";
 
 interface TextElementRef {
@@ -261,6 +281,28 @@ export function TextProperties({
 		});
 	};
 
+	const [isSavingPreset, setIsSavingPreset] = useState(false);
+	const [presetNameDraft, setPresetNameDraft] = useState("");
+	const {
+		presets: customPresets,
+		savePreset,
+		deletePreset,
+	} = useCustomTextPresetsStore();
+
+	const isSub = isSubtitleTextElement(element);
+	const speakerInfo = getElementSpeakerInfo(element);
+
+	const handleSavePreset = () => {
+		const name = presetNameDraft.trim();
+		const saved = savePreset({
+			name: name || `Mẫu ${customPresets.length + 1}`,
+			element,
+		});
+		toast.success(`Đã lưu phong cách thành mẫu "${saved.name}"!`);
+		setIsSavingPreset(false);
+		setPresetNameDraft("");
+	};
+
 	const handleFontSizeChange = ({ value }: { value: string }) => {
 		fontSizeDraft.current = value;
 		forceRender();
@@ -390,9 +432,73 @@ export function TextProperties({
 					<TabsTrigger value="style">{t("Style")}</TabsTrigger>
 					<TabsTrigger value="animation">{t("Animation")}</TabsTrigger>
 					<TabsTrigger value="speech">{t("Speech")}</TabsTrigger>
+					<TabsTrigger value="ocr">Quét OCR</TabsTrigger>
 				</TabsList>
 				<TabsContent value="style" className="mt-0 flex-1 overflow-auto">
 					<PanelBaseView className="p-0">
+						{/* Đồng bộ phong cách phụ đề (Đưa lên trên cùng để tiện thao tác) */}
+						<div className="border-b bg-muted/25 px-3 py-2.5 space-y-2">
+							<div className="flex items-center justify-between">
+								<span className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+									<HugeiconsIcon icon={SparklesIcon} className="size-3.5 text-primary" />
+									Đồng bộ phong cách
+								</span>
+								{speakerInfo.speakerName || speakerInfo.speakerId ? (
+									<span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+										Vai: {speakerInfo.speakerName || speakerInfo.speakerId}
+									</span>
+								) : null}
+							</div>
+
+							<div className="grid grid-cols-1 gap-1.5">
+								{speakerInfo.speakerName || speakerInfo.speakerId ? (
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={() => {
+											const res = syncSubtitleStyles({
+												editor,
+												sourceElement: element,
+												scope: "speaker",
+												targetSpeakerId: speakerInfo.speakerId,
+												targetSpeakerName: speakerInfo.speakerName,
+											});
+											toast.success(
+												`Đã đồng bộ phong cách cho ${res.updatedCount} câu phụ đề thuộc phân vai [${res.speakerName}]!`,
+											);
+										}}
+										className="h-7.5 w-full justify-start gap-1.5 border-emerald-500/40 bg-emerald-500/10 text-xs font-bold text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400 cursor-pointer shadow-2xs"
+									>
+										<HugeiconsIcon icon={UserIcon} className="size-3.5" />
+										<span>
+											⚡ Đồng bộ cho phân vai [{speakerInfo.speakerName || speakerInfo.speakerId}]
+										</span>
+									</Button>
+								) : null}
+
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									onClick={() => {
+										const res = syncSubtitleStyles({
+											editor,
+											sourceElement: element,
+											scope: "all",
+										});
+										toast.success(
+											`Đã đồng bộ phong cách cho toàn bộ ${res.updatedCount} câu phụ đề trên Timeline!`,
+										);
+									}}
+									className="h-7.5 w-full justify-start gap-1.5 border-primary/40 bg-primary/10 text-xs font-bold text-primary hover:bg-primary/20 cursor-pointer shadow-2xs"
+								>
+									<HugeiconsIcon icon={SparklesIcon} className="size-3.5" />
+									<span>🌐 Đồng bộ cho TẤT CẢ phụ đề</span>
+								</Button>
+							</div>
+						</div>
+
 						<PropertyGroup
 							title={t("Content")}
 							hasBorderTop={false}
@@ -450,6 +556,7 @@ export function TextProperties({
 									<PropertyItemLabel>{t("Font")}</PropertyItemLabel>
 									<PropertyItemValue>
 										<FontPicker
+											value={element.fontFamily}
 											defaultValue={element.fontFamily}
 											onValueChange={(value: FontFamily) =>
 												editor.timeline.updateElements({
@@ -602,21 +709,205 @@ export function TextProperties({
 										</div>
 									</PropertyItemValue>
 								</PropertyItem>
+								<PropertyItem direction="column">
+									<div className="flex items-center justify-between">
+										<PropertyItemLabel>Độ rộng khung (Tự xuống dòng)</PropertyItemLabel>
+										<span className="font-mono text-[9px] text-muted-foreground">
+											{element.boxWidth && element.boxWidth > 0
+												? `${Math.round(element.boxWidth)}%`
+												: "1 dòng"}
+										</span>
+									</div>
+									<PropertyItemValue>
+										<div className="flex items-center gap-2">
+											<Slider
+												value={[
+													element.boxWidth && element.boxWidth > 0
+														? element.boxWidth
+														: 75,
+												]}
+												min={30}
+												max={95}
+												step={1}
+												onValueChange={([value]) => {
+													editor.timeline.updateElements({
+														updates: buildBatchUpdates({ boxWidth: value }),
+														pushHistory: false,
+													});
+												}}
+												onValueCommit={([value]) => {
+													editor.timeline.updateElements({
+														updates: buildBatchUpdates({ boxWidth: value }),
+														pushHistory: true,
+													});
+												}}
+												className="w-full"
+											/>
+											<Input
+												type="number"
+												value={
+													element.boxWidth && element.boxWidth > 0
+														? Math.round(element.boxWidth)
+														: 75
+												}
+												min={30}
+												max={95}
+												onChange={(e) => {
+													const val = parseInt(e.target.value, 10);
+													if (!Number.isNaN(val)) {
+														editor.timeline.updateElements({
+															updates: buildBatchUpdates({
+																boxWidth: clamp({
+																	value: val,
+																	min: 20,
+																	max: 95,
+																}),
+															}),
+															pushHistory: true,
+														});
+													}
+												}}
+												className="bg-accent h-7 w-12 [appearance:textfield] rounded-sm px-2 text-center font-mono !text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+											/>
+										</div>
+									</PropertyItemValue>
+								</PropertyItem>
 							</div>
 						</PropertyGroup>
 						<PropertyGroup title={t("Presets")} collapsible={false}>
-							<div className="flex flex-wrap gap-1.5">
-								{TEXT_STYLE_PRESETS.map((preset) => (
-									<PresetButton
-										key={preset.id}
-										preset={preset}
-										onClick={() => {
-											editor.timeline.updateElements({
-												updates: buildBatchUpdates(preset.styles),
-											});
-										}}
-									/>
-								))}
+							<div className="space-y-3">
+								<div>
+									<p className="mb-1.5 text-[10px] font-medium text-muted-foreground">Mẫu có sẵn</p>
+									<div className="flex flex-wrap gap-1.5">
+										{TEXT_STYLE_PRESETS.map((preset) => (
+											<PresetButton
+												key={preset.id}
+												preset={preset}
+												onClick={() => {
+													const hasBg =
+														preset.styles.backgroundColor &&
+														preset.styles.backgroundColor !== "transparent";
+													editor.timeline.updateElements({
+														updates: buildBatchUpdates({
+															color: preset.styles.color ?? "#ffffff",
+															backgroundColor:
+																preset.styles.backgroundColor ?? "transparent",
+															stroke: preset.styles.stroke,
+															shadow: preset.styles.shadow,
+															...(hasBg
+																? {
+																		backgroundBorderRadius:
+																			preset.styles.backgroundBorderRadius ?? 6,
+																		backgroundPaddingX:
+																			preset.styles.backgroundPaddingX ?? 6,
+																		backgroundPaddingY:
+																			preset.styles.backgroundPaddingY ?? 3,
+																	}
+																: {}),
+															...(preset.styles.fontWeight
+																? { fontWeight: preset.styles.fontWeight }
+																: {}),
+														}),
+													});
+												}}
+											/>
+										))}
+									</div>
+								</div>
+
+								{customPresets.length > 0 && (
+									<div>
+										<p className="mb-1.5 text-[10px] font-medium text-muted-foreground">
+											Mẫu của bạn ({customPresets.length})
+										</p>
+										<div className="flex flex-wrap gap-1.5">
+											{customPresets.map((preset) => (
+												<PresetButton
+													key={preset.id}
+													preset={preset}
+													isCustom={true}
+													onDelete={() => {
+														deletePreset(preset.id);
+														toast.success(`Đã xóa preset "${preset.name}".`);
+													}}
+													onClick={() => {
+														editor.timeline.updateElements({
+															updates: buildBatchUpdates({
+																...preset.styles,
+																...(preset.styles.positionY !== undefined
+																	? {
+																			transform: {
+																				...element.transform,
+																				position: {
+																					...element.transform.position,
+																					y: preset.styles.positionY,
+																				},
+																			},
+																		}
+																	: {}),
+															}),
+														});
+													}}
+												/>
+											))}
+										</div>
+									</div>
+								)}
+
+								<div className="pt-0.5">
+									{isSavingPreset ? (
+										<div className="flex items-center gap-1.5 rounded-md border bg-muted/40 p-1.5">
+											<Input
+												value={presetNameDraft}
+												onChange={(e) => setPresetNameDraft(e.target.value)}
+												placeholder="Đặt tên cho mẫu..."
+												className="h-6 flex-1 text-xs"
+												autoFocus
+												onKeyDown={(e) => {
+													if (e.key === "Enter") handleSavePreset();
+													if (e.key === "Escape") {
+														setIsSavingPreset(false);
+														setPresetNameDraft("");
+													}
+												}}
+											/>
+											<Button
+												type="button"
+												size="sm"
+												className="h-6 px-2 text-[10px] font-bold"
+												onClick={handleSavePreset}
+											>
+												Lưu
+											</Button>
+											<Button
+												type="button"
+												variant="ghost"
+												size="sm"
+												className="h-6 px-2 text-[10px]"
+												onClick={() => {
+													setIsSavingPreset(false);
+													setPresetNameDraft("");
+												}}
+											>
+												Hủy
+											</Button>
+										</div>
+									) : (
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											onClick={() => {
+												setIsSavingPreset(true);
+												setPresetNameDraft(`Mẫu ${customPresets.length + 1}`);
+											}}
+											className="h-7 w-full gap-1.5 text-[11px] font-medium hover:border-primary/50"
+										>
+											<HugeiconsIcon icon={PlusSignIcon} className="size-3.5" />
+											<span>Lưu phong cách hiện tại thành Preset</span>
+										</Button>
+									)}
+								</div>
 							</div>
 						</PropertyGroup>
 						<PropertyGroup title={t("Appearance")} collapsible={false}>
@@ -846,8 +1137,134 @@ export function TextProperties({
 											</PropertyItemValue>
 										</PropertyItem>
 										<PropertyItem direction="column">
+											<div className="flex items-center justify-between">
+												<PropertyItemLabel>
+													Độ phủ nền (Vừa chữ ➔ Full khung)
+												</PropertyItemLabel>
+												<span className="font-mono text-[10px] font-semibold text-primary">
+													{typeof element.backgroundWidthRatio === "number"
+														? `${Math.round(element.backgroundWidthRatio)}%`
+														: element.backgroundWidthMode === "full"
+															? "100% (Full)"
+															: "0% (Vừa chữ)"}
+												</span>
+											</div>
+											<PropertyItemValue>
+												<div className="space-y-2 pt-1">
+													<div className="flex items-center gap-2">
+														<Slider
+															value={[
+																typeof element.backgroundWidthRatio === "number"
+																	? element.backgroundWidthRatio
+																	: element.backgroundWidthMode === "full"
+																		? 100
+																		: 0,
+															]}
+															min={0}
+															max={100}
+															step={1}
+															onValueChange={([value]) => {
+																editor.timeline.updateElements({
+																	updates: buildBatchUpdates({
+																		backgroundWidthRatio: value,
+																		backgroundWidthMode:
+																			value >= 100 ? "full" : "auto",
+																	}),
+																	pushHistory: false,
+																});
+															}}
+															onValueCommit={([value]) => {
+																editor.timeline.updateElements({
+																	updates: buildBatchUpdates({
+																		backgroundWidthRatio: value,
+																		backgroundWidthMode:
+																			value >= 100 ? "full" : "auto",
+																	}),
+																	pushHistory: true,
+																});
+															}}
+															className="w-full"
+														/>
+														<span className="w-9 text-center font-mono text-xs text-muted-foreground">
+															{typeof element.backgroundWidthRatio === "number"
+																? `${Math.round(element.backgroundWidthRatio)}%`
+																: element.backgroundWidthMode === "full"
+																	? "100%"
+																	: "0%"}
+														</span>
+													</div>
+													<div className="grid grid-cols-3 gap-1">
+														<Button
+															type="button"
+															variant={
+																element.backgroundWidthRatio === 0 ||
+																(element.backgroundWidthRatio === undefined &&
+																	element.backgroundWidthMode !== "full")
+																	? "default"
+																	: "outline"
+															}
+															size="sm"
+															onClick={() => {
+																editor.timeline.updateElements({
+																	updates: buildBatchUpdates({
+																		backgroundWidthRatio: 0,
+																		backgroundWidthMode: "auto",
+																	}),
+																});
+															}}
+															className="h-6.5 text-[10px] font-medium cursor-pointer"
+														>
+															✨ Vừa chữ (0%)
+														</Button>
+														<Button
+															type="button"
+															variant={
+																element.backgroundWidthRatio === 50
+																	? "default"
+																	: "outline"
+															}
+															size="sm"
+															onClick={() => {
+																editor.timeline.updateElements({
+																	updates: buildBatchUpdates({
+																		backgroundWidthRatio: 50,
+																		backgroundWidthMode: "auto",
+																	}),
+																});
+															}}
+															className="h-6.5 text-[10px] font-medium cursor-pointer"
+														>
+															⚖️ Giữa (50%)
+														</Button>
+														<Button
+															type="button"
+															variant={
+																element.backgroundWidthRatio === 100 ||
+																(element.backgroundWidthRatio === undefined &&
+																	element.backgroundWidthMode === "full")
+																	? "default"
+																	: "outline"
+															}
+															size="sm"
+															onClick={() => {
+																editor.timeline.updateElements({
+																	updates: buildBatchUpdates({
+																		backgroundWidthRatio: 100,
+																		backgroundWidthMode: "full",
+																	}),
+																});
+															}}
+															className="h-6.5 text-[10px] font-medium cursor-pointer"
+														>
+															📏 Full (100%)
+														</Button>
+													</div>
+												</div>
+											</PropertyItemValue>
+										</PropertyItem>
+										<PropertyItem direction="column">
 											<PropertyItemLabel>
-												{t("Border Radius")}
+												{t("Border Radius")} (Bo góc)
 											</PropertyItemLabel>
 											<PropertyItemValue>
 												<div className="flex items-center gap-2">
@@ -888,14 +1305,14 @@ export function TextProperties({
 														}}
 														className="w-full"
 													/>
-													<span className="text-muted-foreground w-8 text-center text-xs">
+													<span className="text-muted-foreground w-8 text-center text-xs font-mono">
 														{element.backgroundBorderRadius ?? 0}
 													</span>
 												</div>
 											</PropertyItemValue>
 										</PropertyItem>
 										<PropertyItem direction="column">
-											<PropertyItemLabel>{t("Height")}</PropertyItemLabel>
+											<PropertyItemLabel>Đệm trên / dưới (Padding Y)</PropertyItemLabel>
 											<PropertyItemValue>
 												<div className="flex items-center gap-2">
 													<Slider
@@ -935,14 +1352,14 @@ export function TextProperties({
 														}}
 														className="w-full"
 													/>
-													<span className="text-muted-foreground w-8 text-center text-xs">
+													<span className="text-muted-foreground w-8 text-center text-xs font-mono">
 														{element.backgroundPaddingY ?? 4}
 													</span>
 												</div>
 											</PropertyItemValue>
 										</PropertyItem>
 										<PropertyItem direction="column">
-											<PropertyItemLabel>{t("Width")}</PropertyItemLabel>
+											<PropertyItemLabel>Đệm trái / phải (Padding X)</PropertyItemLabel>
 											<PropertyItemValue>
 												<div className="flex items-center gap-2">
 													<Slider
@@ -982,7 +1399,7 @@ export function TextProperties({
 														}}
 														className="w-full"
 													/>
-													<span className="text-muted-foreground w-8 text-center text-xs">
+													<span className="text-muted-foreground w-8 text-center text-xs font-mono">
 														{element.backgroundPaddingX ?? 8}
 													</span>
 												</div>
@@ -1688,6 +2105,9 @@ export function TextProperties({
 				<TabsContent value="speech" className="mt-0 flex-1 overflow-auto">
 					<TextSpeechPanel elements={elementRefs} />
 				</TabsContent>
+				<TabsContent value="ocr" className="mt-0 flex-1 overflow-auto">
+					<OriginalSubtitleScanTab />
+				</TabsContent>
 			</Tabs>
 		</div>
 	);
@@ -1696,9 +2116,13 @@ export function TextProperties({
 function PresetButton({
 	preset,
 	onClick,
+	onDelete,
+	isCustom,
 }: {
-	preset: TextStylePreset;
+	preset: TextStylePreset | CustomTextStylePreset;
 	onClick: () => void;
+	onDelete?: () => void;
+	isCustom?: boolean;
 }) {
 	const { preview } = preset;
 	const isClearAll = preset.id === "clear-all";
@@ -1708,9 +2132,9 @@ function PresetButton({
 		: {
 				color: preview.color,
 				backgroundColor: preview.backgroundColor,
-				fontWeight: preview.fontWeight ?? "bold",
+				fontWeight: 900,
 				WebkitTextStroke: preview.stroke
-					? `${Math.max(preview.stroke.width * 0.5, 0.5)}px ${preview.stroke.color}`
+					? `${Math.max(preview.stroke.width * 0.5, 0.75)}px ${preview.stroke.color}`
 					: undefined,
 				textShadow: preview.shadow
 					? `${preview.shadow.offsetX}px ${preview.shadow.offsetY}px ${preview.shadow.blur}px ${preview.shadow.color}`
@@ -1720,57 +2144,72 @@ function PresetButton({
 	const hasBg = !isClearAll && !!preview.backgroundColor;
 
 	return (
-		<button
-			type="button"
-			title={preset.name}
-			className={cn(
-				"flex size-10 cursor-pointer items-center justify-center rounded-md border text-lg font-bold transition-colors select-none",
-				"hover:border-primary/50 hover:bg-accent/80",
-				isClearAll && "relative overflow-hidden",
-			)}
-			style={{
-				backgroundColor: hasBg ? undefined : "rgba(0,0,0,0.6)",
-			}}
-			onClick={onClick}
-			onKeyDown={(event) => {
-				if (event.key === "Enter" || event.key === " ") {
-					onClick();
-				}
-			}}
-		>
-			{isClearAll ? (
-				<svg
-					width="22"
-					height="22"
-					viewBox="0 0 22 22"
-					fill="none"
-					className="text-muted-foreground"
+		<div className="group/preset relative inline-block">
+			<button
+				type="button"
+				title={preset.name}
+				className={cn(
+					"flex h-9 w-10 cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-[#18181b] text-sm font-black transition-all select-none",
+					"hover:border-primary/60 hover:bg-[#27272a] hover:scale-105 active:scale-95 shadow-2xs",
+					isClearAll && "relative overflow-hidden",
+				)}
+				onClick={onClick}
+				onKeyDown={(event) => {
+					if (event.key === "Enter" || event.key === " ") {
+						onClick();
+					}
+				}}
+			>
+				{isClearAll ? (
+					<svg
+						width="18"
+						height="18"
+						viewBox="0 0 22 22"
+						fill="none"
+						className="text-muted-foreground"
+					>
+						<title>Mặc định</title>
+						<circle
+							cx="11"
+							cy="11"
+							r="9"
+							stroke="currentColor"
+							strokeWidth="1.5"
+						/>
+						<line
+							x1="4.5"
+							y1="17.5"
+							x2="17.5"
+							y2="4.5"
+							stroke="currentColor"
+							strokeWidth="1.5"
+						/>
+					</svg>
+				) : (
+					<span
+						style={previewStyle}
+						className={cn(
+							"font-sans font-black leading-none tracking-tight",
+							hasBg ? "rounded px-1 py-0.5 text-[11px]" : "text-sm",
+						)}
+					>
+						Aa
+					</span>
+				)}
+			</button>
+			{isCustom && onDelete && (
+				<button
+					type="button"
+					onClick={(e) => {
+						e.stopPropagation();
+						onDelete();
+					}}
+					title="Xóa preset này"
+					className="absolute -top-1.5 -right-1.5 hidden size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground opacity-90 shadow-sm transition-opacity hover:opacity-100 group-hover/preset:flex cursor-pointer"
 				>
-					<title>Clear All</title>
-					<circle
-						cx="11"
-						cy="11"
-						r="9"
-						stroke="currentColor"
-						strokeWidth="1.5"
-					/>
-					<line
-						x1="4.5"
-						y1="17.5"
-						x2="17.5"
-						y2="4.5"
-						stroke="currentColor"
-						strokeWidth="1.5"
-					/>
-				</svg>
-			) : (
-				<span
-					style={previewStyle}
-					className={cn("leading-none", hasBg && "rounded px-1 py-0.5")}
-				>
-					T
-				</span>
+					×
+				</button>
 			)}
-		</button>
+		</div>
 	);
 }

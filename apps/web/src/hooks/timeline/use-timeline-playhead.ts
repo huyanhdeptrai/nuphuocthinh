@@ -2,6 +2,7 @@ import { getSnappedSeekTime } from "@/lib/time";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useEdgeAutoScroll } from "@/hooks/timeline/use-edge-auto-scroll";
 import { useEditor } from "../use-editor";
+import { usePlaybackFlags } from "@/hooks/use-playback";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 
 interface UseTimelinePlayheadProps {
@@ -21,10 +22,8 @@ export function useTimelinePlayhead({
 }: UseTimelinePlayheadProps) {
 	const editor = useEditor();
 	const activeProject = editor.project.getActive();
-	const currentTime = editor.playback.getCurrentTime();
 	const duration = editor.timeline.getTotalDuration();
-	const isPlaying = editor.playback.getIsPlaying();
-	const isScrubbing = editor.playback.getIsScrubbing();
+	const { isPlaying, isScrubbing } = usePlaybackFlags();
 
 	const seek = useCallback(
 		({ time }: { time: number }) => editor.playback.seek({ time }),
@@ -38,7 +37,9 @@ export function useTimelinePlayhead({
 	const lastMouseXRef = useRef<number>(0);
 
 	const playheadPosition =
-		isScrubbing && scrubTime !== null ? scrubTime : currentTime;
+		isScrubbing && scrubTime !== null
+			? scrubTime
+			: editor.playback.getCurrentTime();
 
 	const handleScrub = useCallback(
 		({ event }: { event: MouseEvent | React.MouseEvent }) => {
@@ -179,35 +180,34 @@ export function useTimelinePlayhead({
 	useEffect(() => {
 		if (!isPlaying || isScrubbing) return;
 
-		const rulerViewport = rulerScrollRef.current;
-		const tracksViewport = tracksScrollRef.current;
-		if (!rulerViewport || !tracksViewport) return;
+		let frame = 0;
+		const tick = () => {
+			const rulerViewport = rulerScrollRef.current;
+			const tracksViewport = tracksScrollRef.current;
+			if (rulerViewport && tracksViewport) {
+				const playheadPixels =
+					editor.playback.getCurrentTime() *
+					TIMELINE_CONSTANTS.PIXELS_PER_SECOND *
+					zoomLevel;
+				const viewportWidth = rulerViewport.clientWidth;
+				const scrollMaximum = rulerViewport.scrollWidth - viewportWidth;
+				const needsScroll =
+					playheadPixels < rulerViewport.scrollLeft ||
+					playheadPixels > rulerViewport.scrollLeft + viewportWidth;
 
-		const playheadPixels =
-			playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
-		const viewportWidth = rulerViewport.clientWidth;
-		const scrollMinimum = 0;
-		const scrollMaximum = rulerViewport.scrollWidth - viewportWidth;
-
-		const needsScroll =
-			playheadPixels < rulerViewport.scrollLeft ||
-			playheadPixels > rulerViewport.scrollLeft + viewportWidth;
-
-		if (needsScroll) {
-			const desiredScroll = Math.max(
-				scrollMinimum,
-				Math.min(scrollMaximum, playheadPixels - viewportWidth / 2),
-			);
-			rulerViewport.scrollLeft = tracksViewport.scrollLeft = desiredScroll;
-		}
-	}, [
-		playheadPosition,
-		zoomLevel,
-		rulerScrollRef,
-		tracksScrollRef,
-		isScrubbing,
-		isPlaying,
-	]);
+				if (needsScroll) {
+					const desiredScroll = Math.max(
+						0,
+						Math.min(scrollMaximum, playheadPixels - viewportWidth / 2),
+					);
+					rulerViewport.scrollLeft = tracksViewport.scrollLeft = desiredScroll;
+				}
+			}
+			frame = requestAnimationFrame(tick);
+		};
+		frame = requestAnimationFrame(tick);
+		return () => cancelAnimationFrame(frame);
+	}, [zoomLevel, rulerScrollRef, tracksScrollRef, isScrubbing, isPlaying, editor]);
 
 	return {
 		playheadPosition,

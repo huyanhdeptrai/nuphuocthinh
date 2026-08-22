@@ -1,28 +1,31 @@
 {
-  "name": "editkub",
+  "name": "lemyloi-dichvideo",
   "packageManager": "bun@1.2.18",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "dev:web": "turbo run dev --filter=@editkub/web",
-    "build:web": "turbo run build --filter=@editkub/web",
-    "dev:tools": "turbo run dev --filter=@editkub/tools",
-    "build:tools": "turbo run build --filter=@editkub/tools",
-    "start:tools": "turbo run start --filter=@editkub/tools",
+    "dev:web": "turbo run dev --filter=@lemyloi-dichvideo/web",
+    "dev:desktop": "bun scripts/dev-desktop.mjs",
+    "build:web": "turbo run build --filter=@lemyloi-dichvideo/web",
+    "prepare:desktop": "bun scripts/prepare-desktop-web.mjs",
+    "dist:win": "bun run build:web && bun run prepare:desktop && bunx electron-builder --project apps/desktop --win",
     "lint:web": "biome lint apps/web/src --max-diagnostics=1000",
     "lint:web:fix": "biome lint apps/web/src --write --max-diagnostics=1000",
     "format:web": "biome format apps/web/src/services/renderer --write --max-diagnostics=1000",
+    "benchmark:asr-filter": "bun --cwd apps/web benchmark:asr-filter",
     "test": "bun test"
   },
   "dependencies": {
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "better-auth": "^1.6.23",
-    "next": "^16.2.10"
+    "next": "^16.3.1"
   },
   "devDependencies": {
+    "electron": "43.4.1",
+    "electron-builder": "^26.15.3",
     "turbo": "^2.7.5",
     "typescript": "5.8.3"
   },

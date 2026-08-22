@@ -9,6 +9,7 @@ import {
 	getLocale,
 } from "@i18next-toolkit/nextjs-approuter/server";
 import { i18nConfig } from "../i18n.config";
+import { getGoogleFontsStylesheetUrls } from "@/constants/font-constants";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const figtree = Figtree({ subsets: ["latin"], variable: "--font-figtree" });
@@ -36,6 +37,19 @@ export default async function RootLayout({
 			className={`${inter.variable} ${figtree.variable} ${geistMono.variable}`}
 		>
 			<head>
+				<link rel="preconnect" href="https://fonts.googleapis.com" />
+				<link
+					rel="preconnect"
+					href="https://fonts.gstatic.com"
+					crossOrigin="anonymous"
+				/>
+				{getGoogleFontsStylesheetUrls().map((url, idx) => (
+					<link
+						key={idx}
+						rel="stylesheet"
+						href={url}
+					/>
+				))}
 				<Script
 					src="https://tianji.9tee.dev/tracker.js"
 					data-website-id="cmrky2xou0006fmgxlok8pf8m"

@@ -389,9 +389,9 @@ const roadmapPhases: RoadmapPhase[] = [
 				status: { text: "Not started", type: "default" },
 			},
 			{
-				title: "“Edit with Editkub” Badge",
+				title: "“Edit with Lemyloi-dichvideo” Badge",
 				description:
-					"Embeddable web component for video players. Click-to-open Editkub with project pre-loaded. For content platforms and embeds.",
+					"Embeddable web component for video players. Click-to-open Lemyloi-dichvideo with project pre-loaded. For content platforms and embeds.",
 				status: { text: "Not started", type: "default" },
 			},
 		],
@@ -417,13 +417,13 @@ const roadmapPhases: RoadmapPhase[] = [
 ];
 
 export const metadata: Metadata = {
-	title: "Roadmap - Editkub",
+	title: "Roadmap - Lemyloi-dichvideo",
 	description:
-		"See what's coming next for Editkub - the free, open-source video editor that respects your privacy.",
+		"See what's coming next for Lemyloi-dichvideo - the free, open-source video editor that respects your privacy.",
 	openGraph: {
-		title: "Editkub Roadmap - What's Coming Next",
+		title: "Lemyloi-dichvideo Roadmap - What's Coming Next",
 		description:
-			"See what's coming next for Editkub - the free, open-source video editor that respects your privacy.",
+			"See what's coming next for Lemyloi-dichvideo - the free, open-source video editor that respects your privacy.",
 		type: "website",
 		images: [
 			{
@@ -435,9 +435,9 @@ export const metadata: Metadata = {
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "Editkub Roadmap - What's Coming Next",
+		title: "Lemyloi-dichvideo Roadmap - What's Coming Next",
 		description:
-			"See what's coming next for Editkub - the free, open-source video editor that respects your privacy.",
+			"See what's coming next for Lemyloi-dichvideo - the free, open-source video editor that respects your privacy.",
 	},
 };
 
@@ -472,7 +472,7 @@ export default function RoadmapPage() {
 
 				<GitHubContributeSection
 					title="Want to help?"
-					description="Editkub is open source and built by the community. Every contribution,
+					description="Lemyloi-dichvideo is open source and built by the community. Every contribution,
           no matter how small, helps us build the best free video editor
           possible."
 				/>

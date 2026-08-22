@@ -144,7 +144,7 @@ export const useKeybindingsStore = create<KeybindingsState>()(
 			},
 		}),
 		{
-			name: "editkub-keybindings",
+			name: "lemyloi-dichvideo-keybindings",
 			version: CURRENT_VERSION,
 			partialize: (state) => ({
 				keybindings: state.keybindings,

@@ -1,7 +1,7 @@
 {
-  "name": "@editkub/env",
+  "name": "@lemyloi-dichvideo/env",
   "version": "0.0.0",
-  "description": "Environment package for Editkub",
+  "description": "Environment package for Lemyloi-dichvideo",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

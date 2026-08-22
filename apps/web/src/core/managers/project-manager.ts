@@ -93,6 +93,7 @@ export class ProjectManager {
 					type: "color",
 					color: DEFAULT_COLOR,
 				},
+					originalSubtitleCues: [],
 			},
 			version: CURRENT_PROJECT_VERSION,
 			layoutMode: "landscape",

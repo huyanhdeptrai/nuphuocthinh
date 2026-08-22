@@ -2,6 +2,7 @@
 
 import { cn } from "@/utils/ui";
 import { useEditor } from "@/hooks/use-editor";
+import { usePlaybackTime } from "@/hooks/use-playback";
 import { useTranslation } from "@i18next-toolkit/nextjs-approuter";
 import {
 	disableChannel,
@@ -59,6 +60,7 @@ export function KeyframeRow({
 	const editor = useEditor();
 	const { t } = useTranslation();
 	const active = hasChannel(keyframes, property);
+	const playheadTime = usePlaybackTime({ throttleMs: 120, enabled: active });
 
 	const getBaseValue = (): number => {
 		switch (property) {
@@ -95,7 +97,7 @@ export function KeyframeRow({
 
 	const addKeyframeAtPlayhead = (e: React.MouseEvent) => {
 		e.stopPropagation();
-		const localTime = editor.playback.getCurrentTime() - elementStartTime;
+		const localTime = playheadTime - elementStartTime;
 		// Clamp to element bounds.
 		const clamped = Math.max(0, Math.min(elementDuration, localTime));
 
@@ -125,7 +127,7 @@ export function KeyframeRow({
 		active &&
 		getKeyframeAtTime(
 			keyframes?.[property],
-			editor.playback.getCurrentTime() - elementStartTime,
+			playheadTime - elementStartTime,
 		);
 
 	return (

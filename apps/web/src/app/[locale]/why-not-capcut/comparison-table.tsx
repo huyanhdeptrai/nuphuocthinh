@@ -15,8 +15,8 @@ type FeatureStatus = "yes" | "no" | "partial";
 
 interface ComparisonRow {
 	feature: string;
-	editkub: FeatureStatus;
-	editkubNote: string;
+	lemyloiDichvideo: FeatureStatus;
+	lemyloiDichvideoNote: string;
 	capcut: FeatureStatus;
 	capcutNote: string;
 	capcutSourceUrl?: string;
@@ -39,22 +39,22 @@ export function ComparisonTable() {
 	const rows: ComparisonRow[] = [
 		{
 			feature: t("Price"),
-			editkub: "yes",
-			editkubNote: t("100% free, no premium tiers"),
+			lemyloiDichvideo: "yes",
+			lemyloiDichvideoNote: t("100% free, no premium tiers"),
 			capcut: "partial",
 			capcutNote: t("Free tier with paid Pro plan"),
 		},
 		{
 			feature: t("Open Source"),
-			editkub: "yes",
-			editkubNote: t("Fully open source on GitHub"),
+			lemyloiDichvideo: "yes",
+			lemyloiDichvideoNote: t("Fully open source on GitHub"),
 			capcut: "no",
 			capcutNote: t("Closed-source proprietary"),
 		},
 		{
 			feature: t("Privacy"),
-			editkub: "yes",
-			editkubNote: t("Files stay on your device"),
+			lemyloiDichvideo: "yes",
+			lemyloiDichvideoNote: t("Files stay on your device"),
 			capcut: "no",
 			capcutNote: t("Files uploaded to servers"),
 			capcutSourceUrl:
@@ -63,64 +63,64 @@ export function ComparisonTable() {
 		},
 		{
 			feature: t("Account Required"),
-			editkub: "yes",
-			editkubNote: t("No sign-up needed"),
+			lemyloiDichvideo: "yes",
+			lemyloiDichvideoNote: t("No sign-up needed"),
 			capcut: "no",
 			capcutNote: t("Account required"),
 		},
 		{
 			feature: t("Watermark-Free Export"),
-			editkub: "yes",
-			editkubNote: t("Never adds watermarks"),
+			lemyloiDichvideo: "yes",
+			lemyloiDichvideoNote: t("Never adds watermarks"),
 			capcut: "partial",
 			capcutNote: t("Watermark on free tier exports"),
 		},
 		{
 			feature: t("Browser-Based"),
-			editkub: "yes",
-			editkubNote: t("Runs entirely in your browser"),
+			lemyloiDichvideo: "yes",
+			lemyloiDichvideoNote: t("Runs entirely in your browser"),
 			capcut: "partial",
 			capcutNote: t("Web version available, desktop app preferred"),
 		},
 		{
 			feature: t("AI Features"),
-			editkub: "yes",
-			editkubNote: t("AI agent, image generation, transcription"),
+			lemyloiDichvideo: "yes",
+			lemyloiDichvideoNote: t("AI agent, image generation, transcription"),
 			capcut: "yes",
 			capcutNote: t("AI-powered editing features"),
 		},
 		{
 			feature: t("Multi-Track Timeline"),
-			editkub: "yes",
-			editkubNote: t("Video, audio, text, sticker tracks"),
+			lemyloiDichvideo: "yes",
+			lemyloiDichvideoNote: t("Video, audio, text, sticker tracks"),
 			capcut: "yes",
 			capcutNote: t("Full multi-track timeline"),
 		},
 		{
 			feature: t("Export Formats"),
-			editkub: "partial",
-			editkubNote: t("MP4 and WebM"),
+			lemyloiDichvideo: "partial",
+			lemyloiDichvideoNote: t("MP4 and WebM"),
 			capcut: "yes",
 			capcutNote: t("MP4, MOV, and more"),
 		},
 		{
 			feature: t("Offline Editing"),
-			editkub: "yes",
-			editkubNote: t("Works offline after initial load"),
+			lemyloiDichvideo: "yes",
+			lemyloiDichvideoNote: t("Works offline after initial load"),
 			capcut: "partial",
 			capcutNote: t("Desktop app works offline"),
 		},
 		{
 			feature: t("No Installation"),
-			editkub: "yes",
-			editkubNote: t("Just open the website"),
+			lemyloiDichvideo: "yes",
+			lemyloiDichvideoNote: t("Just open the website"),
 			capcut: "no",
 			capcutNote: t("Desktop app requires installation"),
 		},
 		{
 			feature: t("Self-Hostable"),
-			editkub: "yes",
-			editkubNote: t("Deploy on your own server"),
+			lemyloiDichvideo: "yes",
+			lemyloiDichvideoNote: t("Deploy on your own server"),
 			capcut: "no",
 			capcutNote: t("Not available for self-hosting"),
 		},
@@ -139,7 +139,7 @@ export function ComparisonTable() {
 								{t("Feature")}
 							</TableHead>
 							<TableHead className="font-semibold text-green-600 dark:text-green-400">
-								Editkub
+								Lemyloi-dichvideo
 							</TableHead>
 							<TableHead className="font-semibold">CapCut</TableHead>
 						</TableRow>
@@ -152,9 +152,9 @@ export function ComparisonTable() {
 								</TableCell>
 								<TableCell>
 									<div className="flex items-center gap-2">
-										<StatusIcon status={row.editkub} />
+										<StatusIcon status={row.lemyloiDichvideo} />
 										<span className="text-muted-foreground text-sm">
-											{row.editkubNote}
+											{row.lemyloiDichvideoNote}
 										</span>
 									</div>
 								</TableCell>
@@ -163,7 +163,7 @@ export function ComparisonTable() {
 									<StatusIcon status={row.capcut} />
 									<div className="flex flex-col gap-0.5">
 										<span className="text-muted-foreground text-sm">
-											{row.editkubNote}
+											{row.lemyloiDichvideoNote}
 										</span>
 										{row.capcutSourceUrl && (
 											<a

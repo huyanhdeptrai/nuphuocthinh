@@ -4,8 +4,6 @@ import { Separator } from "@/components/ui/separator";
 import { type Tab, useAssetsPanelStore } from "@/stores/assets-panel-store";
 import { TabBar } from "./tabbar";
 import { AIView } from "./views/ai";
-import { Captions } from "./views/captions";
-import { SubtitlesView } from "./views/subtitles";
 import { MediaView } from "./views/media";
 import { SettingsView } from "./views/settings";
 import { SoundsView } from "./views/sounds";
@@ -14,6 +12,13 @@ import { TextView } from "./views/text";
 import { TransitionsView } from "./views/transitions";
 import { FiltersView } from "./views/filters";
 import { EffectsView } from "./views/effects";
+import { OverlaysView } from "./views/overlays";
+import {
+	NarrationView,
+	RecognitionView,
+	TranslationView,
+	VoiceLibraryView,
+} from "./views/dubbing";
 
 export function AssetsPanel() {
 	const { activeTab } = useAssetsPanelStore();
@@ -24,9 +29,12 @@ export function AssetsPanel() {
 		text: <TextView />,
 		stickers: <StickersView />,
 		effects: <EffectsView />,
+		overlays: <OverlaysView />,
 		transitions: <TransitionsView />,
-		captions: <Captions />,
-		subtitles: <SubtitlesView />,
+		recognition: <RecognitionView />,
+		translation: <TranslationView />,
+		"voice-library": <VoiceLibraryView />,
+		narration: <NarrationView />,
 		filters: <FiltersView />,
 		ai: <AIView />,
 		settings: <SettingsView />,

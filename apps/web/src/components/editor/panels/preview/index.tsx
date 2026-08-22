@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef } from "react";
 import useDeepCompareEffect from "use-deep-compare-effect";
-import { X } from "lucide-react";
+import { Gauge, X } from "lucide-react";
 import { useEditor } from "@/hooks/use-editor";
 import { useRafLoop } from "@/hooks/use-raf-loop";
 import { useContainerSize } from "@/hooks/use-container-size";
@@ -14,6 +14,7 @@ import { formatTimeCode, getLastFrameTime } from "@/lib/time";
 import { PreviewInteractionOverlay } from "./preview-interaction-overlay";
 import { VoiceoverOverlay } from "./voiceover-overlay";
 import { EditableTimecode } from "@/components/editable-timecode";
+import { CanvasSizeSelector } from "./canvas-size-selector";
 import { invokeAction } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +38,8 @@ import {
 	PREVIEW_ZOOM_LEVELS,
 	usePreviewZoomStore,
 } from "@/stores/preview-zoom-store";
+import { usePlaybackFlags, usePlaybackTime } from "@/hooks/use-playback";
+import { getPreviewRenderSize } from "@/lib/preview/preview-size";
 import type { MediaAsset } from "@/types/assets";
 import { cn } from "@/utils/ui";
 import { useTranslation } from "@i18next-toolkit/nextjs-approuter";
@@ -244,6 +247,9 @@ function exportCurrentFrame({
 		});
 }
 
+
+const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+
 function PreviewToolbar({
 	isFullscreen,
 	onToggleFullscreen,
@@ -253,14 +259,36 @@ function PreviewToolbar({
 }) {
 	const { t } = useTranslation();
 	const editor = useEditor();
-	const isPlaying = editor.playback.getIsPlaying();
-	const currentTime = editor.playback.getCurrentTime();
+	const { isPlaying, playbackRate } = usePlaybackFlags();
+	const currentRate = playbackRate ?? 1;
+	const speedLabel = currentRate === 1 ? "1x" : `${currentRate}x`;
+	const currentTime = usePlaybackTime({ throttleMs: 80 });
 	const totalDuration = editor.timeline.getTotalDuration();
 	const fps = editor.project.getActive().settings.fps;
 	const zoom = usePreviewZoomStore((s) => s.zoom);
 	const setZoom = usePreviewZoomStore((s) => s.setZoom);
-
 	const zoomLabel = zoom === null ? t("Fit") : `${Math.round(zoom * 100)}%`;
+
+	const handleSpeedChange = (speed: number) => {
+		try {
+			if (typeof editor.playback.setPlaybackRate === "function") {
+				editor.playback.setPlaybackRate({ rate: speed });
+			} else {
+				(editor.playback as unknown as { playbackRate: number }).playbackRate = speed;
+				(editor.playback as unknown as { lastUpdate: number }).lastUpdate = performance.now();
+				(editor.playback as unknown as { notify?: () => void }).notify?.();
+				if (typeof window !== "undefined") {
+					window.dispatchEvent(
+						new CustomEvent("playback-rate-change", {
+							detail: { rate: speed },
+						}),
+					);
+				}
+			}
+		} catch (error) {
+			console.warn("Failed to set playback rate:", error);
+		}
+	};
 
 	return (
 		<div className="grid grid-cols-[1fr_auto_1fr] items-center pb-3 pt-5 px-5">
@@ -281,6 +309,12 @@ function PreviewToolbar({
 						fps,
 					})}
 				</span>
+
+				<CanvasSizeSelector
+					variant="outline"
+					size="sm"
+					className="h-7 px-2 font-mono text-xs"
+				/>
 
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
@@ -311,6 +345,61 @@ function PreviewToolbar({
 								data-active={zoom === level}
 							>
 								{`${Math.round(level * 100)}%`}
+							</DropdownMenuItem>
+						))}
+					</DropdownMenuContent>
+				</DropdownMenu>
+
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button
+							variant="outline"
+							size="sm"
+							type="button"
+							onMouseDown={(event) => event.preventDefault()}
+							className={cn(
+								"h-7 px-2 font-mono text-xs transition-colors",
+								currentRate !== 1
+									? "border-blue-500/50 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold"
+									: "text-muted-foreground",
+							)}
+							title="Tốc độ phát preview"
+						>
+							<Gauge className="size-3.5 mr-1 opacity-70" />
+							{speedLabel}
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="start" side="top" className="min-w-36">
+						<DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+							Tốc độ phát Preview
+						</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						{PLAYBACK_SPEEDS.map((speed) => (
+							<DropdownMenuItem
+								key={speed}
+								onClick={() => handleSpeedChange(speed)}
+								className={cn(
+									"flex items-center justify-between text-xs font-mono cursor-pointer",
+									currentRate === speed &&
+										"font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10",
+								)}
+							>
+								<span>{speed}x</span>
+								{speed === 1 && (
+									<span className="text-[10px] text-muted-foreground font-sans ml-2">
+										(Mặc định)
+									</span>
+								)}
+								{speed === 0.5 && (
+									<span className="text-[10px] text-muted-foreground font-sans ml-2">
+										(Chậm 50%)
+									</span>
+								)}
+								{speed === 2 && (
+									<span className="text-[10px] text-muted-foreground font-sans ml-2">
+										(Nhanh 2x)
+									</span>
+								)}
 							</DropdownMenuItem>
 						))}
 					</DropdownMenuContent>
@@ -374,14 +463,6 @@ function PreviewCanvas() {
 	const activeProject = editor.project.getActive();
 	const zoom = usePreviewZoomStore((s) => s.zoom);
 
-	const renderer = useMemo(() => {
-		return new CanvasRenderer({
-			width: nativeWidth,
-			height: nativeHeight,
-			fps: activeProject.settings.fps,
-		});
-	}, [nativeWidth, nativeHeight, activeProject.settings.fps]);
-
 	const displaySize = useMemo(() => {
 		if (
 			!nativeWidth ||
@@ -392,12 +473,10 @@ function PreviewCanvas() {
 			return { width: nativeWidth ?? 0, height: nativeHeight ?? 0 };
 		}
 
-		// Explicit zoom: render at nativeSize * zoom, allow overflow (scroll)
 		if (zoom !== null) {
 			return { width: nativeWidth * zoom, height: nativeHeight * zoom };
 		}
 
-		// Fit: letterbox to container, preserve aspect ratio
 		const paddingBuffer = 4;
 		const availableWidth = containerSize.width - paddingBuffer;
 		const availableHeight = containerSize.height - paddingBuffer;
@@ -423,40 +502,76 @@ function PreviewCanvas() {
 		zoom,
 	]);
 
-	// When zoomed in beyond the container, allow scrolling; when Fit, center
+	const previewSize = useMemo(
+		() =>
+			getPreviewRenderSize({
+				nativeWidth: nativeWidth ?? 1,
+				nativeHeight: nativeHeight ?? 1,
+				displayWidth: displaySize.width,
+				displayHeight: displaySize.height,
+			}),
+		[nativeWidth, nativeHeight, displaySize.width, displaySize.height],
+	);
+
+	const renderer = useMemo(() => {
+		return new CanvasRenderer({
+			width: nativeWidth ?? previewSize.width,
+			height: nativeHeight ?? previewSize.height,
+			bufferWidth: previewSize.width,
+			bufferHeight: previewSize.height,
+			fps: activeProject.settings.fps,
+			quality: "preview",
+			previewMaxEdge: Math.max(previewSize.width, previewSize.height),
+		});
+	}, [
+		nativeWidth,
+		nativeHeight,
+		previewSize.width,
+		previewSize.height,
+		activeProject.settings.fps,
+	]);
+
 	const isOverflow = zoom !== null && displaySize.width > 0;
 
 	const renderTree = editor.renderer.getRenderTree();
+	const renderTreeRef = useRef(renderTree);
+	renderTreeRef.current = renderTree;
+	const rendererRef = useRef(renderer);
+	rendererRef.current = renderer;
+	const editorRef = useRef(editor);
+	editorRef.current = editor;
+	lastFrameRef.current = -1;
 
 	const render = useCallback(() => {
-		if (canvasRef.current && renderTree && !renderingRef.current) {
-			const time = editor.playback.getCurrentTime();
-			const lastFrameTime = getLastFrameTime({
-				duration: renderTree.duration,
-				fps: renderer.fps,
-			});
-			const renderTime = Math.min(time, lastFrameTime);
-			const frame = Math.floor(renderTime * renderer.fps);
+		const canvas = canvasRef.current;
+		const tree = editorRef.current.renderer.getRenderTree();
+		const activeRenderer = rendererRef.current;
+		if (!canvas || !tree || renderingRef.current) return;
 
-			if (
-				frame !== lastFrameRef.current ||
-				renderTree !== lastSceneRef.current
-			) {
-				renderingRef.current = true;
-				lastSceneRef.current = renderTree;
-				lastFrameRef.current = frame;
-				renderer
-					.renderToCanvas({
-						node: renderTree,
-						time: renderTime,
-						targetCanvas: canvasRef.current,
-					})
-					.then(() => {
-						renderingRef.current = false;
-					});
-			}
+		const time = editorRef.current.playback.getCurrentTime();
+		const lastFrameTime = getLastFrameTime({
+			duration: tree.duration,
+			fps: activeRenderer.fps,
+		});
+		const renderTime = Math.min(time, lastFrameTime);
+		const frame = Math.floor(renderTime * activeRenderer.fps);
+
+		if (frame !== lastFrameRef.current || tree !== lastSceneRef.current) {
+			renderingRef.current = true;
+			lastSceneRef.current = tree;
+			lastFrameRef.current = frame;
+			activeRenderer
+				.renderToCanvas({
+					node: tree,
+					time: renderTime,
+					targetCanvas: canvas,
+				})
+				.catch(() => undefined)
+				.finally(() => {
+					renderingRef.current = false;
+				});
 		}
-	}, [renderer, renderTree, editor.playback]);
+	}, []);
 
 	useRafLoop(render);
 
@@ -474,23 +589,20 @@ function PreviewCanvas() {
 			>
 				<canvas
 					ref={canvasRef}
-					width={nativeWidth}
-					height={nativeHeight}
+					width={previewSize.width}
+					height={previewSize.height}
 					className="block border"
 					style={{
 						width: displaySize.width,
 						height: displaySize.height,
-						background:
-							activeProject.settings.background.type === "blur"
-								? "transparent"
-								: activeProject.settings.background.type === "gradient"
-									? activeProject.settings.background.css
-									: activeProject.settings.background.color,
+						background: "#000000",
 					}}
 				/>
 				<PreviewInteractionOverlay
 					canvasRef={canvasRef}
 					displaySize={displaySize}
+					canvasWidth={nativeWidth ?? 0}
+					canvasHeight={nativeHeight ?? 0}
 				/>
 				<VoiceoverOverlay displaySize={displaySize} />
 			</div>

@@ -116,6 +116,7 @@ export async function generateAndInsertSpeech({
 		startTime,
 		buffer: result.buffer,
 	});
+	audioElement.audioRole = "narration";
 
 	const trackId = findAvailableAudioTrack({
 		editor,

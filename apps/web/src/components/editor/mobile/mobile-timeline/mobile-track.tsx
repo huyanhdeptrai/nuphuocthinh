@@ -406,28 +406,35 @@ export function MobileTrack({
 						: undefined;
 
 				const isVideoTrack = track.type === "video";
+				const customBgColor =
+					("speakerColor" in element && (element as any).speakerColor) ||
+					("timelineColor" in element && (element as any).timelineColor) ||
+					("subtitleSpeaker" in element && (element as any).subtitleSpeaker?.color) ||
+					(element.type === "audio" && "color" in element && element.color);
 
-				return (
-					<Fragment key={element.id}>
-					<button
-						ref={(node) => {
-							if (node) {
-								elementRefsMap.current.set(element.id, node);
-							} else {
-								elementRefsMap.current.delete(element.id);
-							}
-						}}
-						type="button"
-						className={cn(
-							"absolute top-0 flex items-center gap-1.5 overflow-hidden rounded-md px-2 text-xs text-white",
-							isVideoTrack ? "bg-blue-600" : trackColor,
-							selected && "ring-primary ring-2",
-						)}
-						style={{
-							left,
-							width: Math.max(width, 4),
-							height: MOBILE_TRACK_HEIGHT,
-						}}
+					return (
+						<Fragment key={element.id}>
+						<button
+							ref={(node) => {
+								if (node) {
+									elementRefsMap.current.set(element.id, node);
+								} else {
+									elementRefsMap.current.delete(element.id);
+								}
+							}}
+							type="button"
+							className={cn(
+								"absolute top-0 flex items-center gap-1.5 overflow-hidden rounded-md px-2 text-xs text-white",
+								isVideoTrack ? "bg-blue-600" : (customBgColor ? "" : trackColor),
+								selected &&
+									"border-2 border-red-500 ring-2 ring-red-500/60 shadow-[0_0_8px_rgba(239,68,68,0.6)]",
+							)}
+							style={{
+								left,
+								width: Math.max(width, 4),
+								height: MOBILE_TRACK_HEIGHT,
+								backgroundColor: !isVideoTrack && customBgColor ? customBgColor : undefined,
+							}}
 						onClick={() => {
 							if (dragRef.current.moved) return;
 							if (selected) {

@@ -28,6 +28,11 @@ const webEnvSchema = z.object({
 	R2_SECRET_ACCESS_KEY: z.string().optional(),
 	R2_BUCKET_NAME: z.string().optional(),
 	R2_PUBLIC_URL: z.string().optional(),
+
+	// GPU runtime pack (GitHub Releases manifest, or R2 public URL)
+	EDITKUB_GPU_MANIFEST_URL: z.union([z.url(), z.literal("")]).optional(),
+	// Backwards compatible with builds/configuration created before the Editkub rename.
+	LEMYLOI_DICHVIDEO_GPU_MANIFEST_URL: z.union([z.url(), z.literal("")]).optional(),
 });
 
 export type WebEnv = z.infer<typeof webEnvSchema>;

@@ -1,158 +1,53 @@
 <p align="center">
-  <img src="apps/web/public/logos/editkub/Editkub_Banner.png" alt="Editkub banner" />
+  <img src="apps/web/public/logos/lemyloi-dichvideo/logo.png" alt="Lemyloi-dichvideos logo" width="160" />
 </p>
 
-<h1 align="center">Editkub</h1>
+<h1 align="center">Lemyloi-dichvideos</h1>
 
 <p align="center">
-  Privacy-first, open-source video editing.<br />
-  Build, trim, layer, and export directly from your browser.
+  Trình chỉnh sửa video local-first dành cho quy trình nhận dạng, dịch và thuyết minh video.
 </p>
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
-  <a href=".github/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" /></a>
-  <a href="https://buymeacoffee.com/9teeedev"><img src="https://img.shields.io/badge/Donate-Buy%20Me%20a%20Coffee-orange" alt="Buy Me A Coffee" /></a>
-</p>
+## Giới thiệu
 
-<p align="center">
-  <a href="https://www.buymeacoffee.com/9teeedev"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" width="150" alt="Buy Me A Coffee" /></a>
-</p>
+Lemyloi-dichvideos lấy mã nguồn từ [Editkub](https://github.com/9teeedev/editkub) và được tinh chỉnh thêm cho quy trình làm video đa ngôn ngữ:
 
----
+- ASR nhận dạng lời nói và quản lý cue phụ đề trên timeline.
+- OCR phụ đề gốc: quét nhanh thời gian, vị trí và kích thước subtitle xuất hiện trực tiếp trong video.
+- Dịch phụ đề, đồng bộ vị trí phụ đề/lớp phủ theo subtitle gốc.
+- Thuyết minh/TTS, quản lý giọng nói, tách lời và cân chỉnh âm thanh.
+- Chỉnh sửa timeline, lớp phủ, hiệu ứng làm mờ để che subtitle gốc.
 
-> **Fork notice:** Editkub is a fork of [msgbyte/cutia](https://github.com/msgbyte/cutia), which itself forks [OpenCut-app/OpenCut](https://github.com/OpenCut-app/OpenCut). Released under the same MIT license with original copyright retained.
+Đây là mã nguồn mở để bạn có thể **vibe code**: tự tạo ngôn ngữ phù hợp với mình, điều chỉnh giao diện/quy trình làm việc, hoặc bổ sung bất kỳ chức năng nào cần cho dự án video.
 
-## At a Glance
+## Cài đặt nhanh
 
-Editkub is designed for creators who want a clean editing workflow without subscriptions, tracking, or watermark traps.
-
-- Local-first editing mindset
-- Timeline-based multi-track workflow
-- Real-time preview while editing
-- Open-source and contribution-friendly
-
-## Why Editkub Exists
-
-Most lightweight editors are either too limited or progressively locked behind paywalls.  
-Editkub focuses on a simple idea: powerful basics should stay accessible.
-
-## What You Can Do
-
-- Arrange clips in a timeline
-- Layer video, text, audio, and stickers
-- Preview changes in real time
-- Export without watermark pressure
-
-## Stack Snapshot
-
-- `Next.js 16` application in `apps/web`
-- `Bun` for dependency management and scripts
-- `Turborepo` monorepo (`apps/web`, `packages/ui`, `packages/env`)
-- `PostgreSQL + Redis` (optional for frontend-only work)
-- `TypeScript` across the project
-
-## Quick Start (Frontend Only)
-
-> **Core editor works 100% client-side.** No env vars, no databases needed to start editing.
+Yêu cầu: [Bun](https://bun.sh/) và Node.js tương thích.
 
 ```bash
-git clone https://github.com/9teeedev/editkub.git
-cd editkub
+git clone https://github.com/Lexombien/lemyloi-dichvideos.git
+cd lemyloi-dichvideos
 bun install
 bun run dev:web
 ```
 
-Open `http://localhost:4100`.
+Mở `http://localhost:4100`.
 
-## Full Local Setup (With Backend Services)
-
-Some optional features (auth, freesound, uploads) need backing services.
-
-### 1. Start Redis
+## Đóng gói Windows
 
 ```bash
-docker compose up redis serverless-redis-http -d
+bun run dist:win
 ```
 
-### 2. Configure env
+Installer `.exe` được tạo trong `apps/desktop/dist/`. Bản phát hành sẵn dùng được đăng tại trang [Releases](https://github.com/Lexombien/lemyloi-dichvideos/releases).
 
-```bash
-cp apps/web/.env.example apps/web/.env.local
-```
+## Đóng góp và ủng hộ
 
-Required for Redis-backed features:
+Nếu dự án hữu ích, bạn có thể ủng hộ để duy trì và phát triển thêm tính năng:
 
-```bash
-UPSTASH_REDIS_REST_URL="http://localhost:8079"
-UPSTASH_REDIS_REST_TOKEN="editkub_redis_token"
-```
+- VPBank: **275250597**
+- MoMo: **0335127075**
 
-### 3. (Optional) Enable Authentication
+## Ghi nhận mã nguồn và giấy phép
 
-Start PostgreSQL:
-
-```bash
-docker compose up redis serverless-redis-http postgres -d
-```
-
-Add to `.env.local`:
-
-```bash
-DATABASE_URL="postgresql://editkub:***@localhost:5432/editkub"
-BETTER_AUTH_SECRET="your-generated-secret-here"
-```
-
-Generate `BETTER_AUTH_SECRET`:
-
-```bash
-openssl rand -base64 32
-```
-
-Run migrations then start dev:
-
-```bash
-cd apps/web
-bun run db:migrate
-cd ..
-bun run dev:web
-```
-
-## Docker Deployment
-
-Run the full application with Docker:
-
-```bash
-docker compose up --build
-```
-
-Open `http://localhost:3000`.
-
-This starts Redis and the web app. To enable authentication, uncomment the PostgreSQL service and related env vars in `docker-compose.yaml`.
-
-> **AI features** (image generation, TTS, auto-captions via remote API) are disabled by default. Set `EDITKUB_AI_ENABLED=1` to enable.
-
-## Deploy on Vercel
-
-The editor works on Vercel free tier with zero configuration — no env vars required.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2F9teeedev%2Feditkub&project-name=editkub&repository-name=editkub)
-
-## Contributing
-
-Contributions are welcome. Check `.github/CONTRIBUTING.md` before opening a PR.
-
-Current high-impact areas:
-
-- Timeline behavior and interaction quality
-- Project management and reliability
-- Performance tuning and bug fixing
-- UI improvements outside preview internals
-
-## License
-
-Released under the [MIT License](LICENSE).
-
-<p align="right">
-  <sub><sup>NOTE: fork from opencut (#fca99d6126c31fbb18ed9f1034cee6f940b040e8)</sup></sub>
-</p>
+Dự án là bản tinh chỉnh từ [Editkub](https://github.com/9teeedev/editkub), đồng thời kế thừa chuỗi mã nguồn mở của dự án gốc. Bản quyền và điều kiện [MIT License](LICENSE) của các tác giả gốc vẫn được giữ nguyên.

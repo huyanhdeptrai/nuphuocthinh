@@ -13,7 +13,6 @@ export function useEditor(): EditorCore {
 			};
 
 			const unsubscribers = [
-				editor.playback.subscribe(handleStoreChange),
 				editor.timeline.subscribe(handleStoreChange),
 				editor.scenes.subscribe(handleStoreChange),
 				editor.project.subscribe(handleStoreChange),

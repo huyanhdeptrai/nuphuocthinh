@@ -1,0 +1,47 @@
+{
+  "name": "@lemyloi-dichvideo/desktop",
+  "version": "0.1.0",
+  "description": "Lemyloi-dichvideo desktop video editor",
+  "author": "Lemyloi-dichvideo",
+  "packageManager": "bun@1.2.18",
+  "private": true,
+  "main": "main.cjs",
+  "build": {
+    "afterPack": "apps/desktop/after-pack.cjs",
+    "appId": "com.lemyloi-dichvideo.desktop",
+    "productName": "Lemyloi-dichvideo",
+		"icon": "icon.png",
+    "asar": true,
+    "files": [
+      "main.cjs",
+      "package.json",
+      "!node_modules",
+      "!node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../web/.next/standalone",
+        "to": "server",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

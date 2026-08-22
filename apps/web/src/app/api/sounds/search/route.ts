@@ -1,4 +1,4 @@
-import { webEnv } from "@editkub/env/web";
+import { webEnv } from "@lemyloi-dichvideo/env/web";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -155,11 +155,15 @@ export async function GET(request: NextRequest) {
 			return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 		}
 
+		const { searchParams } = new URL(request.url);
+		const headerApiKey = request.headers.get("x-freesound-api-key") || searchParams.get("freesound_api_key");
+		const freesoundApiKey = headerApiKey || webEnv.FREESOUND_API_KEY;
+
 		// ponytail: short-circuit when the Freesound API key is not configured.
 		// Returns a valid empty payload with `soundsEnabled: false` so the
 		// client can render a setup empty-state instead of treating this as
 		// an error and spamming the console.
-		if (!webEnv.FREESOUND_API_KEY) {
+		if (!freesoundApiKey) {
 			return NextResponse.json({
 				count: 0,
 				next: null,
@@ -173,8 +177,6 @@ export async function GET(request: NextRequest) {
 				soundsEnabled: false,
 			});
 		}
-
-		const { searchParams } = new URL(request.url);
 
 		const validationResult = searchParamsSchema.safeParse({
 			q: searchParams.get("q") || undefined,
@@ -222,7 +224,7 @@ export async function GET(request: NextRequest) {
 
 		const params = new URLSearchParams({
 			query: query || "",
-			token: webEnv.FREESOUND_API_KEY ?? "",
+			token: freesoundApiKey,
 			page: page.toString(),
 			page_size: pageSize.toString(),
 			sort: sortParam,

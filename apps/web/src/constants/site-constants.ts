@@ -1,13 +1,13 @@
-export const SITE_URL = "https://editkub.vercel.app";
+export const SITE_URL = "https://lemyloi-dichvideo.vercel.app";
 
 export const SITE_INFO = {
-	title: "Editkub",
+	title: "Lemyloi-dichvideo",
 	description:
-		"Editkub is an AI-native, open-source video editor in your browser — a free, privacy-first alternative to CapCut. AI-powered editing, multi-track timeline, MP4/WebM export with no uploads.",
+		"Lemyloi-dichvideo is an AI-native, open-source video editor in your browser — a free, privacy-first alternative to CapCut. AI-powered editing, multi-track timeline, MP4/WebM export with no uploads.",
 	url: SITE_URL,
-	openGraphImage: "/icon.svg",
-	twitterImage: "/icon.svg",
-	favicon: "/logos/editkub/svg/logo.svg",
+	openGraphImage: "/logos/lemyloi-dichvideo/logo.png",
+	twitterImage: "/logos/lemyloi-dichvideo/logo.png",
+	favicon: "/logos/lemyloi-dichvideo/logo.png",
 };
 
 export type ExternalTool = {
@@ -19,10 +19,10 @@ export type ExternalTool = {
 
 export const EXTERNAL_TOOLS: ExternalTool[] = [];
 
-export const DEFAULT_LOGO_URL = "/logos/editkub/svg/logo.svg";
+export const DEFAULT_LOGO_URL = "/logos/lemyloi-dichvideo/logo.png";
 
 export const SOCIAL_LINKS = {
-	x: "https://x.com/editkub",
-	github: "https://github.com/9teeedev/editkub",
+	x: "https://x.com/lemyloi-dichvideo",
+	github: "https://github.com/9teeedev/lemyloi-dichvideo",
 	discord: "",
 };

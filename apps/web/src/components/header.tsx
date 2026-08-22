@@ -21,10 +21,6 @@ export function Header() {
 
 	const links = [
 		{
-			label: t('Features'),
-			href: "#features",
-		},
-		{
 			label: t("Why not CapCut?"),
 			href: "/why-not-capcut",
 		},
@@ -41,12 +37,12 @@ export function Header() {
 					<Link href="/" className="flex items-center gap-2.5">
 						<Image
 							src={DEFAULT_LOGO_URL}
-							alt="Editkub Logo"
+							alt="Lemyloi-dichvideo Logo"
 							className="dark:invert"
 							width={28}
 							height={28}
 						/>
-						<span className="text-lg font-bold tracking-tight">Editkub</span>
+						<span className="text-lg font-bold tracking-tight">Lemyloi-dichvideo</span>
 					</Link>
 					<nav className="hidden items-center gap-1 md:flex">
 						{links.map((link) => (

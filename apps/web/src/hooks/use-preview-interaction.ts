@@ -27,6 +27,7 @@ import {
 } from "@/lib/preview/element-bounds";
 import { computePreviewSnap, type SnapGuide } from "@/lib/preview/snap";
 import { buildAnimatedTransformUpdate } from "@/lib/timeline/keyframe-utils";
+import { resizeTextBoxFromSide } from "@/lib/preview/text-box-resize";
 
 type ScaleHandle = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 type ResizeHandle = "left" | "right" | "top" | "bottom";
@@ -88,6 +89,27 @@ interface ResizeState {
 	resizeType: "text" | "blur-effect";
 }
 
+function getArrowKeyDelta({
+	key,
+	step,
+}: {
+	key: string;
+	step: number;
+}): { x: number; y: number } | null {
+	switch (key) {
+		case "ArrowUp":
+			return { x: 0, y: -step };
+		case "ArrowDown":
+			return { x: 0, y: step };
+		case "ArrowLeft":
+			return { x: -step, y: 0 };
+		case "ArrowRight":
+			return { x: step, y: 0 };
+		default:
+			return null;
+	}
+}
+
 export function usePreviewInteraction({
 	canvasRef,
 	overlayRef,
@@ -119,13 +141,105 @@ export function usePreviewInteraction({
 		if (!isPickingChroma) setChromaPreview(null);
 	}, [isPickingChroma]);
 
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (
+				event.ctrlKey ||
+				event.metaKey ||
+				event.altKey ||
+				isPickingChroma ||
+				dragStateRef.current ||
+				scaleStateRef.current ||
+				resizeStateRef.current
+			) {
+				return;
+			}
+
+			const target = event.target as HTMLElement | null;
+			const activeElement = document.activeElement as HTMLElement | null;
+			const isEditingText = [target, activeElement].some(
+				(element) =>
+					element &&
+					(element.tagName === "INPUT" ||
+						element.tagName === "TEXTAREA" ||
+						element.isContentEditable),
+			);
+			if (isEditingText) return;
+
+			const delta = getArrowKeyDelta({
+				key: event.key,
+				step: event.shiftKey ? 10 : 1,
+			});
+			if (!delta) return;
+
+			const elementsWithTracks = editor.timeline.getElementsWithTracks({
+				elements: selectedElements,
+			});
+			const movableElements = elementsWithTracks.filter(
+				({ element }) =>
+					element.type === "video" ||
+					element.type === "image" ||
+					element.type === "text" ||
+					element.type === "sticker" ||
+					element.type === "blur-effect",
+			);
+			if (movableElements.length === 0) return;
+
+			const tracks = editor.timeline.getTracks();
+			const localTime = getElementLocalTime({
+				tracks,
+				elements: movableElements.map(({ track, element }) => ({
+					trackId: track.id,
+					elementId: element.id,
+				})),
+				playbackTime: editor.playback.getCurrentTime(),
+			});
+			const updates = movableElements.map(({ track, element }) => {
+				const transform = (element as { transform: Transform }).transform;
+				const nextTransform: Transform = {
+					...transform,
+					position: {
+						x: transform.position.x + delta.x,
+						y: transform.position.y + delta.y,
+					},
+				};
+
+				return {
+					trackId: track.id,
+					elementId: element.id,
+					updates:
+						"keyframes" in element
+							? buildAnimatedTransformUpdate({
+								element: element as {
+									transform: Transform;
+									keyframes?: ElementKeyframes;
+									duration: number;
+								},
+								nextTransform,
+								localTime,
+							})
+							: { transform: nextTransform },
+				};
+			});
+
+			editor.timeline.updateElements({ updates, pushHistory: true });
+			event.preventDefault();
+			event.stopPropagation();
+		};
+
+		window.addEventListener("keydown", handleKeyDown, { capture: true });
+		return () =>
+			window.removeEventListener("keydown", handleKeyDown, { capture: true });
+	}, [editor, isPickingChroma, selectedElements]);
+
 	const getCanvasCoordinates = useCallback(
 		({ clientX, clientY }: { clientX: number; clientY: number }) => {
 			if (!canvasRef.current) return { x: 0, y: 0 };
 
 			const rect = canvasRef.current.getBoundingClientRect();
-			const logicalWidth = canvasRef.current.width;
-			const logicalHeight = canvasRef.current.height;
+			const project = editor.project.getActive();
+			const logicalWidth = project?.settings.canvasSize.width ?? rect.width;
+			const logicalHeight = project?.settings.canvasSize.height ?? rect.height;
 			const scaleX = logicalWidth / rect.width;
 			const scaleY = logicalHeight / rect.height;
 
@@ -134,7 +248,7 @@ export function usePreviewInteraction({
 
 			return { x: canvasX, y: canvasY };
 		},
-		[canvasRef],
+		[canvasRef, editor],
 	);
 
 	const handleChromaPick = useCallback(
@@ -146,7 +260,14 @@ export function usePreviewInteraction({
 				clientX: event.clientX,
 				clientY: event.clientY,
 			});
-			const pixel = sampleCanvasColor({ canvas, x, y });
+			const project = editor.project.getActive();
+			const pixel = sampleCanvasColor({
+				canvas,
+				x,
+				y,
+				logicalWidth: project?.settings.canvasSize.width ?? canvas.width,
+				logicalHeight: project?.settings.canvasSize.height ?? canvas.height,
+			});
 			if (!pixel) return;
 			const updates = editor.timeline
 				.getElementsWithTracks({ elements: selectedElements })
@@ -200,8 +321,15 @@ export function usePreviewInteraction({
 				clientY: event.clientY,
 			});
 
-			const canvasWidth = canvasRef.current?.width ?? 0;
-			const canvasHeight = canvasRef.current?.height ?? 0;
+			const activeProject = editor.project.getActive();
+			const canvasWidth =
+				activeProject?.settings.canvasSize.width ??
+				canvasRef.current?.width ??
+				1920;
+			const canvasHeight =
+				activeProject?.settings.canvasSize.height ??
+				canvasRef.current?.height ??
+				1080;
 			const tracks = editor.timeline.getTracks();
 			const mediaAssets = editor.media.getAssets();
 			const currentTime = editor.playback.getCurrentTime();
@@ -329,8 +457,15 @@ export function usePreviewInteraction({
 			});
 			const transform = (element as { transform: Transform }).transform;
 
-			const canvasWidth = canvasRef.current?.width ?? 0;
-			const canvasHeight = canvasRef.current?.height ?? 0;
+			const activeProject = editor.project.getActive();
+			const canvasWidth =
+				activeProject?.settings.canvasSize.width ??
+				canvasRef.current?.width ??
+				1920;
+			const canvasHeight =
+				activeProject?.settings.canvasSize.height ??
+				canvasRef.current?.height ??
+				1080;
 			const anchorX = canvasWidth / 2 + transform.position.x;
 			const anchorY = canvasHeight / 2 + transform.position.y;
 
@@ -373,17 +508,28 @@ export function usePreviewInteraction({
 				clientY: event.clientY,
 			});
 
-			const canvasHeight = canvasRef.current?.height ?? 0;
-			const canvasWidth = canvasRef.current?.width ?? 0;
+			const activeProject = editor.project.getActive();
+			const canvasWidth =
+				activeProject?.settings.canvasSize.width ??
+				canvasRef.current?.width ??
+				1920;
+			const canvasHeight =
+				activeProject?.settings.canvasSize.height ??
+				canvasRef.current?.height ??
+				1080;
 
 			if (element.type === "text") {
 				const textElement = element as TextElement;
-				const scaleFactor = getTextScaleFactor({ canvasWidth, canvasHeight });
+				const scaleFactor =
+					getTextScaleFactor({ canvasWidth, canvasHeight }) *
+					Math.max(0.001, textElement.transform.scale);
 
+				const lines = textElement.content.split("\n");
+				const maxLineLength = Math.max(...lines.map((l) => l.length), 1);
 				const initialBoxWidth =
 					textElement.boxWidth && textElement.boxWidth > 0
 						? textElement.boxWidth
-						: textElement.content.length * textElement.fontSize * 0.6;
+						: maxLineLength * textElement.fontSize * 0.6;
 
 				resizeStateRef.current = {
 					startX: startPos.x,
@@ -439,7 +585,14 @@ export function usePreviewInteraction({
 					clientX: event.clientX,
 					clientY: event.clientY,
 				});
-				const pixel = sampleCanvasColor({ canvas, x, y });
+				const project = editor.project.getActive();
+				const pixel = sampleCanvasColor({
+					canvas,
+					x,
+					y,
+					logicalWidth: project?.settings.canvasSize.width ?? canvas.width,
+					logicalHeight: project?.settings.canvasSize.height ?? canvas.height,
+				});
 				if (!pixel) return;
 
 				const rect = overlay.getBoundingClientRect();
@@ -460,7 +613,7 @@ export function usePreviewInteraction({
 				const state = resizeStateRef.current;
 				const isVertical = state.handle === "top" || state.handle === "bottom";
 
-				const nextTransform: Transform = {
+				let nextTransform: Transform = {
 					...state.initialTransform,
 					position: { ...state.initialTransform.position },
 				};
@@ -485,19 +638,31 @@ export function usePreviewInteraction({
 				} else {
 					const { scaleFactor } = state;
 					const rawDeltaX = currentPos.x - state.startX;
-					const initialWidthPx = state.initialBoxWidth * scaleFactor;
-					const directedDelta =
-						state.handle === "right" ? rawDeltaX : -rawDeltaX;
-					const newWidthPx = Math.max(20, initialWidthPx + directedDelta);
-					const newBoxWidth = newWidthPx / scaleFactor;
-					const widthChangePx =
-						(newBoxWidth - state.initialBoxWidth) * scaleFactor;
-					nextTransform.position.x =
-						state.initialTransform.position.x +
-						(state.handle === "right"
-							? widthChangePx / 2
-							: -widthChangePx / 2);
-					updates = { boxWidth: newBoxWidth };
+					if (state.resizeType === "text") {
+						const resized = resizeTextBoxFromSide({
+							handle: state.handle as "left" | "right",
+							deltaX: rawDeltaX,
+							initialBoxWidth: state.initialBoxWidth,
+							pixelsPerBoxUnit: scaleFactor,
+							initialTransform: state.initialTransform,
+						});
+						nextTransform = resized.transform;
+						updates = { boxWidth: resized.boxWidth };
+					} else {
+						const initialWidthPx = state.initialBoxWidth * scaleFactor;
+						const directedDelta =
+							state.handle === "right" ? rawDeltaX : -rawDeltaX;
+						const newWidthPx = Math.max(20, initialWidthPx + directedDelta);
+						const newBoxWidth = newWidthPx / scaleFactor;
+						const widthChangePx =
+							(newBoxWidth - state.initialBoxWidth) * scaleFactor;
+						nextTransform.position.x =
+							state.initialTransform.position.x +
+							(state.handle === "right"
+								? widthChangePx / 2
+								: -widthChangePx / 2);
+						updates = { boxWidth: newBoxWidth };
+					}
 				}
 
 				const element = findElement(state.tracksSnapshot, state.elementId);
@@ -693,7 +858,7 @@ export function usePreviewInteraction({
 
 				if (hasResized) {
 					editor.timeline.updateTracks(state.tracksSnapshot);
-					const nextTransform: Transform = {
+					let nextTransform: Transform = {
 						...state.initialTransform,
 						position: { ...state.initialTransform.position },
 					};
@@ -716,19 +881,31 @@ export function usePreviewInteraction({
 						updates = { boxHeight: newBoxHeight };
 					} else {
 						const { scaleFactor } = state;
-						const initialWidthPx = state.initialBoxWidth * scaleFactor;
-						const directedDelta =
-							state.handle === "right" ? rawDelta : -rawDelta;
-						const newWidthPx = Math.max(20, initialWidthPx + directedDelta);
-						const newBoxWidth = newWidthPx / scaleFactor;
-						const widthChangePx =
-							(newBoxWidth - state.initialBoxWidth) * scaleFactor;
-						nextTransform.position.x =
-							state.initialTransform.position.x +
-							(state.handle === "right"
-								? widthChangePx / 2
-								: -widthChangePx / 2);
-						updates = { boxWidth: newBoxWidth };
+						if (state.resizeType === "text") {
+							const resized = resizeTextBoxFromSide({
+								handle: state.handle as "left" | "right",
+								deltaX: rawDelta,
+								initialBoxWidth: state.initialBoxWidth,
+								pixelsPerBoxUnit: scaleFactor,
+								initialTransform: state.initialTransform,
+							});
+							nextTransform = resized.transform;
+							updates = { boxWidth: resized.boxWidth };
+						} else {
+							const initialWidthPx = state.initialBoxWidth * scaleFactor;
+							const directedDelta =
+								state.handle === "right" ? rawDelta : -rawDelta;
+							const newWidthPx = Math.max(20, initialWidthPx + directedDelta);
+							const newBoxWidth = newWidthPx / scaleFactor;
+							const widthChangePx =
+								(newBoxWidth - state.initialBoxWidth) * scaleFactor;
+							nextTransform.position.x =
+								state.initialTransform.position.x +
+								(state.handle === "right"
+									? widthChangePx / 2
+									: -widthChangePx / 2);
+							updates = { boxWidth: newBoxWidth };
+						}
 					}
 
 					const element = findElement(state.tracksSnapshot, state.elementId);
@@ -960,22 +1137,33 @@ function sampleCanvasColor({
 	canvas,
 	x,
 	y,
+	logicalWidth,
+	logicalHeight,
 }: {
 	canvas: HTMLCanvasElement;
 	x: number;
 	y: number;
+	logicalWidth: number;
+	logicalHeight: number;
 }): [number, number, number] | null {
 	if (canvas.width === 0 || canvas.height === 0) return null;
 
 	try {
-		const pixel = canvas
-			.getContext("2d")
-			?.getImageData(
-				Math.max(0, Math.min(canvas.width - 1, Math.floor(x))),
-				Math.max(0, Math.min(canvas.height - 1, Math.floor(y))),
-				1,
-				1,
-			)
+		const sampleX = Math.max(
+			0,
+			Math.min(
+				canvas.width - 1,
+				Math.floor((x / Math.max(1, logicalWidth)) * canvas.width),
+			),
+		);
+		const sampleY = Math.max(
+			0,
+			Math.min(
+				canvas.height - 1,
+				Math.floor((y / Math.max(1, logicalHeight)) * canvas.height),
+			),
+		);
+		const pixel = canvas.getContext("2d")?.getImageData(sampleX, sampleY, 1, 1)
 			.data;
 		return pixel ? [pixel[0], pixel[1], pixel[2]] : null;
 	} catch {

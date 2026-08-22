@@ -85,6 +85,21 @@ function getClickOffsetTime({
 	return clickOffsetX / (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel);
 }
 
+export function getElementClickPlayheadTime({
+	elementStartTime,
+	elementDuration,
+	clickOffsetTime,
+}: {
+	elementStartTime: number;
+	elementDuration: number;
+	clickOffsetTime: number;
+}): number {
+	return Math.min(
+		elementStartTime + elementDuration,
+		Math.max(elementStartTime, elementStartTime + clickOffsetTime),
+	);
+}
+
 function getVerticalDragDirection({
 	startMouseY,
 	currentMouseY,
@@ -619,7 +634,7 @@ export function useElementInteraction({
 			// modifier keys already handled in mousedown
 			if (event.metaKey || event.ctrlKey || event.shiftKey) return;
 
-			// single click: select if not selected
+			// Single click: select the element and put the playhead under the cursor.
 			const alreadySelected = isElementSelected({
 				trackId: track.id,
 				elementId: element.id,
@@ -627,8 +642,20 @@ export function useElementInteraction({
 			if (!alreadySelected) {
 				selectElement({ trackId: track.id, elementId: element.id });
 			}
+			const clickOffsetTime = getClickOffsetTime({
+				clientX: event.clientX,
+				elementRect: event.currentTarget.getBoundingClientRect(),
+				zoomLevel,
+			});
+			editor.playback.seek({
+				time: getElementClickPlayheadTime({
+					elementStartTime: element.startTime,
+					elementDuration: element.duration,
+					clickOffsetTime,
+				}),
+			});
 		},
-		[isElementSelected, selectElement],
+		[isElementSelected, selectElement, editor, zoomLevel],
 	);
 
 	return {

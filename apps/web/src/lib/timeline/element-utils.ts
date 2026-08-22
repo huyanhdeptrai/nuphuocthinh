@@ -147,6 +147,13 @@ export function buildTextElement({
 		opacity: t.opacity ?? DEFAULT_TEXT_ELEMENT.opacity,
 		stroke: t.stroke,
 		shadow: t.shadow,
+		boxWidth: t.boxWidth,
+		backgroundBorderRadius: t.backgroundBorderRadius,
+		backgroundOpacity: t.backgroundOpacity,
+		backgroundPaddingX: t.backgroundPaddingX,
+		backgroundPaddingY: t.backgroundPaddingY,
+		backgroundWidthMode: t.backgroundWidthMode,
+		backgroundWidthRatio: t.backgroundWidthRatio,
 	};
 }
 
@@ -173,21 +180,231 @@ export function buildStickerElement({
 export function buildBlurEffectElement({
 	startTime,
 	blurIntensity = 50,
+	effectMode = "blur",
+	boxWidth = 0.45,
+	boxHeight = 0.35,
+	duration = TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION,
 }: {
 	startTime: number;
 	blurIntensity?: number;
+	effectMode?: import("@/types/timeline").OverlayEffectMode;
+	boxWidth?: number;
+	boxHeight?: number;
+	duration?: number;
 }): CreateBlurEffectElement {
 	return {
 		type: "blur-effect",
-		name: "Blur",
+		name: effectMode === "blur-strip" ? "Dải làm mờ" : "Làm mờ",
+		effectMode,
 		blurIntensity,
-		duration: TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION,
+		feather: 0.4,
+		boxWidth,
+		boxHeight,
+		darkenOverlay: effectMode === "blur-strip" ? 35 : 0,
+		duration,
 		startTime,
 		trimStart: 0,
 		trimEnd: 0,
 		transform: { scale: 1, position: { x: 0, y: 0 }, rotate: 0 },
 		opacity: 1,
 	};
+}
+
+const OVERLAY_EFFECT_DURATION = 4;
+
+export function buildBlurStripElement({
+	startTime,
+	blurIntensity = 128,
+	feather = 0.5,
+	duration = OVERLAY_EFFECT_DURATION,
+}: {
+	startTime: number;
+	blurIntensity?: number;
+	feather?: number;
+	duration?: number;
+}): CreateBlurEffectElement {
+	return {
+		type: "blur-effect",
+		name: "Dải làm mờ",
+		effectMode: "blur-strip",
+		blurIntensity,
+		feather,
+		boxWidth: 0.6,
+		boxHeight: 0.2,
+		darkenOverlay: 35,
+		duration,
+		startTime,
+		trimStart: 0,
+		trimEnd: 0,
+		transform: { scale: 1, position: { x: 0, y: 150 }, rotate: 0 },
+		opacity: 1,
+		syncWithSubtitles: false,
+		subtitlePaddingStart: 0.1,
+		subtitlePaddingEnd: 0.1,
+	};
+}
+
+export function buildPixelateElement({
+	startTime,
+	pixelSize = 16,
+	feather = 0.5,
+	duration = OVERLAY_EFFECT_DURATION,
+}: {
+	startTime: number;
+	pixelSize?: number;
+	feather?: number;
+	duration?: number;
+}): CreateBlurEffectElement {
+	return {
+		type: "blur-effect",
+		name: "Pixelate",
+		effectMode: "pixelate",
+		blurIntensity: 50,
+		pixelSize,
+		feather,
+		boxWidth: 0.45,
+		boxHeight: 0.35,
+		duration,
+		startTime,
+		trimStart: 0,
+		trimEnd: 0,
+		transform: { scale: 1, position: { x: 0, y: 0 }, rotate: 0 },
+		opacity: 1,
+		syncWithSubtitles: false,
+		subtitlePaddingStart: 0.1,
+		subtitlePaddingEnd: 0.1,
+	};
+}
+
+export function buildFrostedGlassElement({
+	startTime,
+	feather = 0.5,
+	blurIntensity = 80,
+	grainIntensity = 30,
+	duration = OVERLAY_EFFECT_DURATION,
+}: {
+	startTime: number;
+	feather?: number;
+	blurIntensity?: number;
+	grainIntensity?: number;
+	duration?: number;
+}): CreateBlurEffectElement {
+	return {
+		type: "blur-effect",
+		name: "Frosted Glass",
+		effectMode: "frosted-glass",
+		blurIntensity,
+		grainIntensity,
+		feather,
+		boxWidth: 0.45,
+		boxHeight: 0.35,
+		duration,
+		startTime,
+		trimStart: 0,
+		trimEnd: 0,
+		transform: { scale: 1, position: { x: 0, y: 0 }, rotate: 0 },
+		opacity: 1,
+		syncWithSubtitles: false,
+		subtitlePaddingStart: 0.1,
+		subtitlePaddingEnd: 0.1,
+	};
+}
+
+export function buildRemoveLogoElement({
+	startTime,
+	feather = 0.5,
+	borderPadding = 4,
+	blurIntensity = 75,
+	duration = OVERLAY_EFFECT_DURATION,
+}: {
+	startTime: number;
+	feather?: number;
+	borderPadding?: number;
+	blurIntensity?: number;
+	duration?: number;
+}): CreateBlurEffectElement {
+	return {
+		type: "blur-effect",
+		name: "Kính mờ",
+		effectMode: "remove-logo",
+		blurIntensity,
+		feather,
+		borderPadding,
+		boxWidth: 0.35,
+		boxHeight: 0.2,
+		duration,
+		startTime,
+		trimStart: 0,
+		trimEnd: 0,
+		transform: { scale: 1, position: { x: 0, y: -100 }, rotate: 0 },
+		opacity: 1,
+		syncWithSubtitles: false,
+		subtitlePaddingStart: 0.1,
+		subtitlePaddingEnd: 0.1,
+	};
+}
+
+export function buildRemoveSubtitleElement({
+	startTime,
+	feather = 0.5,
+	borderPadding = 6,
+	blurIntensity = 75,
+	duration = OVERLAY_EFFECT_DURATION,
+}: {
+	startTime: number;
+	feather?: number;
+	borderPadding?: number;
+	blurIntensity?: number;
+	duration?: number;
+}): CreateBlurEffectElement {
+	return {
+		type: "blur-effect",
+		// Legacy builder retained only for projects saved before the preset was removed.
+		name: "Kính mờ",
+		effectMode: "remove-subtitle",
+		blurIntensity,
+		feather,
+		borderPadding,
+		boxWidth: 0.75,
+		boxHeight: 0.15,
+		expandTop: 0,
+		expandBottom: 0,
+		expandLeft: 0,
+		expandRight: 0,
+		duration,
+		startTime,
+		trimStart: 0,
+		trimEnd: 0,
+		transform: { scale: 1, position: { x: 0, y: 160 }, rotate: 0 },
+		opacity: 1,
+		syncWithSubtitles: false,
+		subtitlePaddingStart: 0.1,
+		subtitlePaddingEnd: 0.1,
+	};
+}
+
+export function findLatestOverlayElementRef({
+	tracks,
+	effectMode,
+	startTime,
+}: {
+	tracks: TimelineTrack[];
+	effectMode: import("@/types/timeline").OverlayEffectMode;
+	startTime: number;
+}): { trackId: string; elementId: string } | null {
+	let found: { trackId: string; elementId: string } | null = null;
+	for (const track of tracks) {
+		for (const element of track.elements) {
+			if (
+				element.type === "blur-effect" &&
+				element.effectMode === effectMode &&
+				element.startTime === startTime
+			) {
+				found = { trackId: track.id, elementId: element.id };
+			}
+		}
+	}
+	return found;
 }
 
 export function buildVideoElement({

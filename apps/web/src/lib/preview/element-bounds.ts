@@ -39,17 +39,21 @@ export function getElementHalfSize({
 
 		const elementBoxWidth = element.boxWidth;
 		const hasBoxWidth = elementBoxWidth !== undefined && elementBoxWidth > 0;
+		const lineHeight = scaledFontSize * 1.3;
 
 		if (hasBoxWidth) {
 			const scaledBoxWidth = elementBoxWidth * scaleFactor;
-			const lineHeight = scaledFontSize * 1.3;
 			const charsPerLine = Math.max(
 				1,
 				Math.floor(scaledBoxWidth / (scaledFontSize * 0.6)),
 			);
+			const paragraphs = element.content.split("\n");
 			const lineCount = Math.max(
 				1,
-				Math.ceil(element.content.length / charsPerLine),
+				paragraphs.reduce(
+					(sum, p) => sum + Math.max(1, Math.ceil(p.length / charsPerLine)),
+					0,
+				),
 			);
 			return {
 				halfWidth: (scaledBoxWidth * elementScale) / 2,
@@ -57,10 +61,14 @@ export function getElementHalfSize({
 			};
 		}
 
+		const lines = element.content.split("\n");
+		const maxLineLength = Math.max(...lines.map((l) => l.length), 1);
+		const lineCount = Math.max(1, lines.length);
+
 		return {
 			halfWidth:
-				(element.content.length * scaledFontSize * 0.6 * elementScale) / 2,
-			halfHeight: (scaledFontSize * 1.4 * elementScale) / 2,
+				(maxLineLength * scaledFontSize * 0.6 * elementScale) / 2,
+			halfHeight: (lineCount * lineHeight * elementScale) / 2,
 		};
 	}
 
@@ -75,11 +83,14 @@ export function getElementHalfSize({
 	}
 
 	if (element.type === "blur-effect") {
-		// Blur effect region: scale relative to canvas size
-		// scale=1 → full canvas, scale=0.5 → half canvas
+		// Blur effect regions scale relative to the canvas, then use their
+		// independent width and height ratios just like the renderer and
+		// preview selection frame.
+		const boxWidth = element.boxWidth ?? 1;
+		const boxHeight = element.boxHeight ?? 1;
 		return {
-			halfWidth: (canvasWidth * transform.scale) / 2,
-			halfHeight: (canvasHeight * transform.scale) / 2,
+			halfWidth: (canvasWidth * transform.scale * boxWidth) / 2,
+			halfHeight: (canvasHeight * transform.scale * boxHeight) / 2,
 		};
 	}
 

@@ -2,7 +2,7 @@ import { betterAuth, type RateLimit } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { Redis } from "@upstash/redis";
 import { db } from "@/lib/db";
-import { webEnv } from "@editkub/env/web";
+import { webEnv } from "@lemyloi-dichvideo/env/web";
 
 function isAuthConfigured() {
 	return Boolean(webEnv.DATABASE_URL && webEnv.BETTER_AUTH_SECRET);
@@ -56,7 +56,7 @@ function createAuth() {
 			},
 		},
 		baseURL: webEnv.NEXT_PUBLIC_SITE_URL,
-		appName: "Editkub",
+		appName: "Lemyloi-dichvideo",
 		trustedOrigins: [webEnv.NEXT_PUBLIC_SITE_URL],
 	});
 }

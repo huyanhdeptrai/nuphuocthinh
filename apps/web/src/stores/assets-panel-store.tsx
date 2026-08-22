@@ -11,19 +11,24 @@ import {
 	TextIcon,
 	Settings01Icon,
 	ColorsIcon,
-	LeftToRightBlockQuoteIcon,
+	TranslateIcon,
+	VoiceIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { Layers } from "lucide-react";
 
 export const TAB_KEYS = [
 	"media",
 	"sounds",
 	"text",
+	"overlays",
 	"stickers",
 	"effects",
 	"transitions",
-	"captions",
-	"subtitles",
+	"recognition",
+	"translation",
+	"voice-library",
+	"narration",
 	"filters",
 	"ai",
 	"settings",
@@ -41,11 +46,14 @@ const TAB_LABELS: Record<Tab, string> = {
 	media: "Media",
 	sounds: "Sounds",
 	text: "Text",
+	overlays: "Lớp phủ",
 	stickers: "Stickers",
 	effects: "Effects",
 	transitions: "Transitions",
-	captions: "Captions",
-	subtitles: "Subtitles",
+	recognition: "Nhận Dạng Videos",
+	translation: "Dịch Thuật AI",
+	"voice-library": "Kho Mẫu Giọng",
+	narration: "Thuyết minh",
 	filters: "Filters",
 	ai: "AI",
 	settings: "Settings",
@@ -64,6 +72,10 @@ export const tabs = {
 		icon: createHugeiconsIcon({ icon: TextIcon }),
 		label: TAB_LABELS.text,
 	},
+	overlays: {
+		icon: Layers,
+		label: TAB_LABELS.overlays,
+	},
 	stickers: {
 		icon: createHugeiconsIcon({ icon: Happy01Icon }),
 		label: TAB_LABELS.stickers,
@@ -76,13 +88,21 @@ export const tabs = {
 		icon: createHugeiconsIcon({ icon: ArrowRightDoubleIcon }),
 		label: TAB_LABELS.transitions,
 	},
-	captions: {
+	recognition: {
 		icon: createHugeiconsIcon({ icon: ClosedCaptionIcon }),
-		label: TAB_LABELS.captions,
+		label: TAB_LABELS.recognition,
 	},
-	subtitles: {
-		icon: createHugeiconsIcon({ icon: LeftToRightBlockQuoteIcon }),
-		label: TAB_LABELS.subtitles,
+	translation: {
+		icon: createHugeiconsIcon({ icon: TranslateIcon }),
+		label: TAB_LABELS.translation,
+	},
+	"voice-library": {
+		icon: createHugeiconsIcon({ icon: VoiceIcon }),
+		label: TAB_LABELS["voice-library"],
+	},
+	narration: {
+		icon: createHugeiconsIcon({ icon: HeadphonesIcon }),
+		label: TAB_LABELS.narration,
 	},
 	filters: {
 		icon: createHugeiconsIcon({ icon: ColorsIcon }),
@@ -113,6 +133,9 @@ interface AssetsPanelStore {
 	/* Media */
 	mediaViewMode: MediaViewMode;
 	setMediaViewMode: (mode: MediaViewMode) => void;
+
+	settingsTab: "project-info" | "background" | "ai";
+	setSettingsTab: (tab: "project-info" | "background" | "ai") => void;
 }
 
 export const useAssetsPanelStore = create<AssetsPanelStore>((set) => ({
@@ -124,4 +147,6 @@ export const useAssetsPanelStore = create<AssetsPanelStore>((set) => ({
 	clearHighlight: () => set({ highlightMediaId: null }),
 	mediaViewMode: "grid",
 	setMediaViewMode: (mode) => set({ mediaViewMode: mode }),
+	settingsTab: "project-info",
+	setSettingsTab: (settingsTab) => set({ settingsTab }),
 }));

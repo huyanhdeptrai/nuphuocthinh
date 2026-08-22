@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/resizable";
 import { AssetsPanel } from "@/components/editor/panels/assets";
 import { AgentPanel } from "@/components/editor/panels/agent";
+import { SubtitlePanel } from "@/components/editor/panels/subtitles";
 import { PropertiesPanel } from "@/components/editor/panels/properties";
 import { Timeline } from "@/components/editor/panels/timeline";
 import { PreviewPanel } from "@/components/editor/panels/preview";
@@ -68,7 +69,7 @@ function EditorShell() {
 }
 
 function EditorLayout() {
-	const { panels, setPanel } = usePanelStore();
+	const { panels, setPanel, isSubtitlesOpen } = usePanelStore();
 	const isAgentOpen = useAgentStore((s) => s.isOpen);
 	const editor = useEditor();
 	const layoutMode = editor.project.getLayoutMode();
@@ -77,7 +78,11 @@ function EditorLayout() {
 	if (isVertical) {
 		// Vertical: Preview is a full-height sibling on the right.
 		// Left side = Assets|Properties (top) + Timeline (bottom).
-		const leftDefault = 100 - panels.preview - (isAgentOpen ? panels.agent : 0);
+		const leftDefault =
+			100 -
+			panels.preview -
+			(isSubtitlesOpen ? panels.subtitles : 0) -
+			(isAgentOpen ? panels.agent : 0);
 
 		return (
 			<ResizablePanelGroup
@@ -85,8 +90,13 @@ function EditorLayout() {
 				className="size-full gap-[0.19rem]"
 				onLayout={(sizes) => {
 					setPanel("preview", sizes[1] ?? panels.preview);
-					if (isAgentOpen && sizes[2] != null) {
-						setPanel("agent", sizes[2]);
+					let nextPanelIndex = 2;
+					if (isSubtitlesOpen) {
+						setPanel("subtitles", sizes[nextPanelIndex] ?? panels.subtitles);
+						nextPanelIndex += 1;
+					}
+					if (isAgentOpen && sizes[nextPanelIndex] != null) {
+						setPanel("agent", sizes[nextPanelIndex]);
 					}
 				}}
 			>
@@ -174,12 +184,28 @@ function EditorLayout() {
 					<PreviewPanel />
 				</ResizablePanel>
 
+				{isSubtitlesOpen && (
+					<>
+						<ResizableHandle withHandle />
+						<ResizablePanel
+							id="vertical-subtitles"
+							order={3}
+							defaultSize={panels.subtitles}
+							minSize={18}
+							maxSize={38}
+							className="min-w-0"
+						>
+							<SubtitlePanel />
+						</ResizablePanel>
+					</>
+				)}
+
 				{isAgentOpen && (
 					<>
 						<ResizableHandle withHandle />
 						<ResizablePanel
 							id="vertical-agent"
-							order={3}
+							order={isSubtitlesOpen ? 4 : 3}
 							defaultSize={panels.agent}
 							minSize={15}
 							maxSize={35}
@@ -199,15 +225,24 @@ function EditorLayout() {
 			direction="horizontal"
 			className="size-full gap-[0.19rem]"
 			onLayout={(sizes) => {
-				if (isAgentOpen && sizes[1] != null) {
-					setPanel("agent", sizes[1]);
+				let nextPanelIndex = 1;
+				if (isSubtitlesOpen) {
+					setPanel("subtitles", sizes[nextPanelIndex] ?? panels.subtitles);
+					nextPanelIndex += 1;
+				}
+				if (isAgentOpen && sizes[nextPanelIndex] != null) {
+					setPanel("agent", sizes[nextPanelIndex]);
 				}
 			}}
 		>
 			<ResizablePanel
 				id="landscape-main"
 				order={1}
-				defaultSize={isAgentOpen ? 100 - panels.agent : 100}
+				defaultSize={
+					100 -
+					(isSubtitlesOpen ? panels.subtitles : 0) -
+					(isAgentOpen ? panels.agent : 0)
+				}
 				minSize={50}
 				className="min-w-0"
 			>
@@ -289,12 +324,28 @@ function EditorLayout() {
 				</ResizablePanelGroup>
 			</ResizablePanel>
 
+			{isSubtitlesOpen && (
+				<>
+					<ResizableHandle withHandle />
+					<ResizablePanel
+						id="landscape-subtitles"
+						order={2}
+						defaultSize={panels.subtitles}
+						minSize={18}
+						maxSize={38}
+						className="min-w-0"
+					>
+						<SubtitlePanel />
+					</ResizablePanel>
+				</>
+			)}
+
 			{isAgentOpen && (
 				<>
 					<ResizableHandle withHandle />
 					<ResizablePanel
 						id="landscape-agent"
-						order={2}
+						order={isSubtitlesOpen ? 3 : 2}
 						defaultSize={panels.agent}
 						minSize={15}
 						maxSize={35}

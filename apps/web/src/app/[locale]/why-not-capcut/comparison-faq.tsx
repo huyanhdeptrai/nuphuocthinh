@@ -21,27 +21,27 @@ export function useComparisonFaqItems(): ComparisonFaqItem[] {
 
 	return [
 		{
-			question: t("Is Editkub a good alternative to CapCut?"),
+			question: t("Is Lemyloi-dichvideo a good alternative to CapCut?"),
 			answer: t(
-				"Yes. Editkub is designed as a free, open-source, privacy-first alternative to CapCut. It offers AI-native editing, multi-track timeline, MP4/WebM export, and runs entirely in your browser — no account, no uploads, no watermarks.",
+				"Yes. Lemyloi-dichvideo is designed as a free, open-source, privacy-first alternative to CapCut. It offers AI-native editing, multi-track timeline, MP4/WebM export, and runs entirely in your browser — no account, no uploads, no watermarks.",
 			),
 		},
 		{
-			question: t("Does Editkub have the same features as CapCut?"),
+			question: t("Does Lemyloi-dichvideo have the same features as CapCut?"),
 			answer: t(
-				"Editkub covers the core editing features most creators need: multi-track timeline, text and sticker overlays, AI image generation, audio transcription, and caption generation. CapCut offers additional advanced features like effects templates and more export formats, but Editkub is rapidly growing as an open-source project.",
+				"Lemyloi-dichvideo covers the core editing features most creators need: multi-track timeline, text and sticker overlays, AI image generation, audio transcription, and caption generation. CapCut offers additional advanced features like effects templates and more export formats, but Lemyloi-dichvideo is rapidly growing as an open-source project.",
 			),
 		},
 		{
-			question: t("Is Editkub really free with no watermarks?"),
+			question: t("Is Lemyloi-dichvideo really free with no watermarks?"),
 			answer: t(
-				"Yes. Editkub is 100% free with no premium tiers, no subscriptions, and no watermarks on exported videos. It is open-source software that you can use without any restrictions.",
+				"Yes. Lemyloi-dichvideo is 100% free with no premium tiers, no subscriptions, and no watermarks on exported videos. It is open-source software that you can use without any restrictions.",
 			),
 		},
 		{
 			question: t("Does CapCut upload my videos to servers?"),
 			answer: t(
-				"Yes. CapCut requires uploading your media files to remote servers for processing and storage. Editkub takes the opposite approach — all media processing happens locally in your browser and your files never leave your device.",
+				"Yes. CapCut requires uploading your media files to remote servers for processing and storage. Lemyloi-dichvideo takes the opposite approach — all media processing happens locally in your browser and your files never leave your device.",
 			),
 			sourceQuote: t(
 				'"We may collect User Content through pre-uploading at the time of creation, import, or upload, regardless of whether you choose to save or publish that User Content."',
@@ -52,29 +52,29 @@ export function useComparisonFaqItems(): ComparisonFaqItem[] {
 			),
 		},
 		{
-			question: t("Can I use Editkub without creating an account?"),
+			question: t("Can I use Lemyloi-dichvideo without creating an account?"),
 			answer: t(
-				"Yes. Editkub requires no sign-up or login. Just open the website and start editing immediately. Your projects are saved locally in your browser.",
+				"Yes. Lemyloi-dichvideo requires no sign-up or login. Just open the website and start editing immediately. Your projects are saved locally in your browser.",
 			),
 		},
 		{
-			question: t("Is Editkub open source?"),
+			question: t("Is Lemyloi-dichvideo open source?"),
 			answer: t(
-				"Yes. Editkub is fully open source and available on GitHub. You can inspect the code, contribute, fork it, or self-host it on your own server.",
+				"Yes. Lemyloi-dichvideo is fully open source and available on GitHub. You can inspect the code, contribute, fork it, or self-host it on your own server.",
 			),
 		},
 		{
 			question: t(
-				"What AI features does Editkub offer compared to CapCut?",
+				"What AI features does Lemyloi-dichvideo offer compared to CapCut?",
 			),
 			answer: t(
-				"Editkub is AI-native with a built-in AI agent that can edit videos from natural language prompts, AI image generation for creating visuals, and audio transcription for automatic caption generation. These features are integrated into the core editing workflow.",
+				"Lemyloi-dichvideo is AI-native with a built-in AI agent that can edit videos from natural language prompts, AI image generation for creating visuals, and audio transcription for automatic caption generation. These features are integrated into the core editing workflow.",
 			),
 		},
 		{
-			question: t("Can I use Editkub on a Chromebook?"),
+			question: t("Can I use Lemyloi-dichvideo on a Chromebook?"),
 			answer: t(
-				"Yes. Editkub runs entirely in your browser and works on any platform including Chromebooks, shared computers, and tablets — no installation or plugins required.",
+				"Yes. Lemyloi-dichvideo runs entirely in your browser and works on any platform including Chromebooks, shared computers, and tablets — no installation or plugins required.",
 			),
 		},
 	];

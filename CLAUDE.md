@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Editkub is a privacy-first, open-source browser-based video editor. It uses a Turborepo monorepo with Bun as the package manager. The main application lives in `apps/web/` (Next.js 16 + React 19 + TypeScript).
+Lemyloi-dichvideo is a privacy-first, open-source browser-based video editor. It uses a Turborepo monorepo with Bun as the package manager. The main application lives in `apps/web/` (Next.js 16 + React 19 + TypeScript).
 
 ## Commands
 
@@ -55,8 +55,8 @@ docker compose up --build                          # Full stack
 
 ### Monorepo Structure
 - `apps/web/` — Main Next.js application
-- `packages/ui/` — Shared UI components and icons (`@editkub/ui`)
-- `packages/env/` — Environment variable validation (`@editkub/env`)
+- `packages/ui/` — Shared UI components and icons (`@lemyloi-dichvideo/ui`)
+- `packages/env/` — Environment variable validation (`@lemyloi-dichvideo/env`)
 
 ### EditorCore (Singleton)
 

@@ -29,7 +29,7 @@ export function TimelinePlayhead({
 	const internalPlayheadRef = useRef<HTMLDivElement>(null);
 	const playheadRef = externalPlayheadRef || internalPlayheadRef;
 
-	const { playheadPosition, handlePlayheadMouseDown } = useTimelinePlayhead({
+	const { handlePlayheadMouseDown } = useTimelinePlayhead({
 		zoomLevel,
 		rulerRef,
 		rulerScrollRef,
@@ -54,10 +54,22 @@ export function TimelinePlayhead({
 			scrollContainer.removeEventListener("scroll", syncScrollOffset);
 	}, [tracksScrollRef, playheadRef]);
 
-	const totalHeight = containerRef.current?.clientHeight ?? 400;
+	useEffect(() => {
+		const playheadElement = playheadRef.current;
+		if (!playheadElement) return;
 
-	const timelinePosition =
-		playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
+		let frame = 0;
+		const tick = () => {
+			const time = editor.playback.getCurrentTime();
+			const x = time * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
+			playheadElement.style.left = `${x}px`;
+			frame = requestAnimationFrame(tick);
+		};
+		frame = requestAnimationFrame(tick);
+		return () => cancelAnimationFrame(frame);
+	}, [editor, playheadRef, zoomLevel]);
+
+	const totalHeight = containerRef.current?.clientHeight ?? 400;
 
 	const handlePlayheadKeyDown = (
 		event: React.KeyboardEvent<HTMLDivElement>,
@@ -67,9 +79,10 @@ export function TimelinePlayhead({
 		event.preventDefault();
 		const step = 1 / Math.max(1, editor.project.getActive().settings.fps);
 		const direction = event.key === "ArrowRight" ? 1 : -1;
+		const currentTime = editor.playback.getCurrentTime();
 		const nextTime = Math.max(
 			0,
-			Math.min(duration, playheadPosition + direction * step),
+			Math.min(duration, currentTime + direction * step),
 		);
 
 		editor.playback.seek({ time: nextTime });
@@ -82,11 +95,11 @@ export function TimelinePlayhead({
 			aria-label="Timeline playhead"
 			aria-valuemin={0}
 			aria-valuemax={duration}
-			aria-valuenow={playheadPosition}
+			aria-valuenow={editor.playback.getCurrentTime()}
 			tabIndex={0}
 			className="pointer-events-auto absolute z-60 will-change-transform"
 			style={{
-				left: `${timelinePosition}px`,
+				left: 0,
 				top: 0,
 				height: `${totalHeight}px`,
 				width: "2px",
@@ -94,10 +107,14 @@ export function TimelinePlayhead({
 			onMouseDown={handlePlayheadMouseDown}
 			onKeyDown={handlePlayheadKeyDown}
 		>
-			<div className="bg-foreground absolute left-0 h-full w-0.5 cursor-col-resize" />
+			<div className="bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] absolute left-0 h-full w-[2px] cursor-col-resize" />
 
 			<div
-				className={`absolute top-1 left-1/2 size-3 -translate-x-1/2 transform rounded-full border-2 shadow-xs ${isSnappingToPlayhead ? "bg-foreground border-foreground" : "bg-foreground border-foreground/50"}`}
+				className={`absolute top-0 left-1/2 size-3.5 -translate-x-1/2 transform rounded-full border-2 border-white bg-red-500 shadow-md ${
+					isSnappingToPlayhead
+						? "ring-2 ring-red-400 scale-110"
+						: "hover:scale-110"
+				}`}
 			/>
 		</div>
 	);

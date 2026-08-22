@@ -1,5 +1,6 @@
 import type {
 	AudioElement,
+	AudioRole,
 	LibraryAudioElement,
 	TimelineElement,
 	TimelineTrack,
@@ -8,11 +9,19 @@ import type { MediaAsset } from "@/types/assets";
 import { canElementHaveAudio } from "@/lib/timeline/element-utils";
 import { canTracktHaveAudio } from "@/lib/timeline";
 import { mediaSupportsAudio } from "@/lib/media/media-utils";
+import { resolveDuckMix } from "@/dubbing/adapters/duck-mix";
+import {
+	DUCK_ATTACK_MS,
+	DUCK_RELEASE_MS,
+	gainAtTime,
+	getElementAudioRole,
+	isDuckingCandidateRole,
+} from "@/dubbing/services/duck-envelope";
 
 export type CollectedAudioElement = Omit<
 	AudioElement,
 	"type" | "mediaId" | "id" | "name" | "sourceType" | "sourceUrl"
-> & { buffer: AudioBuffer };
+> & { buffer: AudioBuffer; audioRole?: AudioRole };
 
 export function createAudioContext(): AudioContext {
 	const AudioContextConstructor =
@@ -145,51 +154,53 @@ export async function collectAudioElements({
 				"muted" in element ? (element.muted ?? false) : false;
 			const muted = isTrackMuted || isElementMuted;
 
-		if (element.type === "audio") {
-			const volume = element.volume ?? 1;
-			pendingElements.push(
-				resolveAudioBufferForElement({
-					element,
-					mediaMap,
-					audioContext,
-				}).then((audioBuffer) => {
-					if (!audioBuffer) return null;
-					return {
-						buffer: audioBuffer,
-						startTime: element.startTime,
-						duration: element.duration,
-						trimStart: element.trimStart,
-						trimEnd: element.trimEnd,
-						volume,
-						muted,
-					};
-				}),
-			);
-		}
+			if (element.type === "audio") {
+				const volume = element.volume ?? 1;
+				pendingElements.push(
+					resolveAudioBufferForElement({
+						element,
+						mediaMap,
+						audioContext,
+					}).then((audioBuffer) => {
+						if (!audioBuffer) return null;
+						return {
+							buffer: audioBuffer,
+							startTime: element.startTime,
+							duration: element.duration,
+							trimStart: element.trimStart,
+							trimEnd: element.trimEnd,
+							volume,
+							muted,
+							audioRole: getElementAudioRole({ element }),
+						};
+					}),
+				);
+			}
 
-		if (element.type === "video") {
-			const mediaAsset = mediaMap.get(element.mediaId);
-			if (!mediaAsset || !mediaSupportsAudio({ media: mediaAsset }))
-				continue;
+			if (element.type === "video") {
+				const mediaAsset = mediaMap.get(element.mediaId);
+				if (!mediaAsset || !mediaSupportsAudio({ media: mediaAsset }))
+					continue;
 
-			pendingElements.push(
-				resolveVideoAudioBuffer({
-					file: mediaAsset.file,
-					audioContext,
-				}).then((audioBuffer) => {
-					if (!audioBuffer) return null;
-					return {
-						buffer: audioBuffer,
-						startTime: element.startTime,
-						duration: element.duration,
-						trimStart: element.trimStart,
-						trimEnd: element.trimEnd,
-						volume: 1,
-						muted,
-					};
-				}),
-			);
-		}
+				pendingElements.push(
+					resolveVideoAudioBuffer({
+						file: mediaAsset.file,
+						audioContext,
+					}).then((audioBuffer) => {
+						if (!audioBuffer) return null;
+						return {
+							buffer: audioBuffer,
+							startTime: element.startTime,
+							duration: element.duration,
+							trimStart: element.trimStart,
+							trimEnd: element.trimEnd,
+							volume: getElementVolume({ element }),
+							muted,
+							audioRole: getElementAudioRole({ element }) ?? "source",
+						};
+					}),
+				);
+			}
 		}
 	}
 
@@ -256,6 +267,7 @@ interface AudioMixSource {
 	duration: number;
 	trimStart: number;
 	trimEnd: number;
+	volume: number;
 	playbackRate: number;
 }
 
@@ -270,6 +282,7 @@ export interface AudioClipSource {
 	muted: boolean;
 	volume: number;
 	playbackRate: number;
+	audioRole?: AudioRole;
 }
 
 async function fetchLibraryAudioSource({
@@ -294,6 +307,7 @@ async function fetchLibraryAudioSource({
 			duration: element.duration,
 			trimStart: element.trimStart,
 			trimEnd: element.trimEnd,
+			volume: getElementVolume({ element }),
 			playbackRate: element.playbackRate ?? 1,
 		};
 	} catch (error) {
@@ -331,6 +345,7 @@ async function fetchLibraryAudioClip({
 			muted,
 			volume: element.volume ?? 1,
 			playbackRate: element.playbackRate ?? 1,
+			audioRole: getElementAudioRole({ element }),
 		};
 	} catch (error) {
 		console.warn("Failed to fetch library audio:", error);
@@ -349,6 +364,17 @@ function getElementPlaybackRate({
 	return 1;
 }
 
+function getElementVolume({
+	element,
+}: {
+	element: TimelineElement;
+}): number {
+	if ("volume" in element && typeof element.volume === "number") {
+		return element.volume;
+	}
+	return 1;
+}
+
 function collectMediaAudioSource({
 	element,
 	mediaAsset,
@@ -362,19 +388,9 @@ function collectMediaAudioSource({
 		duration: element.duration,
 		trimStart: element.trimStart,
 		trimEnd: element.trimEnd,
+		volume: getElementVolume({ element }),
 		playbackRate: getElementPlaybackRate({ element }),
 	};
-}
-
-function getElementVolume({
-	element,
-}: {
-	element: TimelineElement;
-}): number {
-	if ("volume" in element && typeof element.volume === "number") {
-		return element.volume;
-	}
-	return 1;
 }
 
 function collectMediaAudioClip({
@@ -397,6 +413,9 @@ function collectMediaAudioClip({
 		muted,
 		volume: getElementVolume({ element }),
 		playbackRate: getElementPlaybackRate({ element }),
+		audioRole:
+			getElementAudioRole({ element }) ??
+			(element.type === "video" ? "source" : undefined),
 	};
 }
 
@@ -422,6 +441,7 @@ export async function collectAudioMixSources({
 			const isElementMuted =
 				"muted" in element ? (element.muted ?? false) : false;
 			if (isElementMuted) continue;
+			if (getElementVolume({ element }) <= 0) continue;
 
 			if (element.type === "audio") {
 				if (element.sourceType === "upload") {
@@ -554,6 +574,7 @@ export async function createTimelineAudioBuffer({
 		outputLength,
 		sampleRate,
 	);
+	const duck = resolveDuckMix({ tracks });
 
 	for (const element of audioElements) {
 		if (element.muted) continue;
@@ -563,6 +584,7 @@ export async function createTimelineAudioBuffer({
 			outputBuffer,
 			outputLength,
 			sampleRate,
+			duck,
 		});
 	}
 
@@ -574,11 +596,13 @@ function mixAudioChannels({
 	outputBuffer,
 	outputLength,
 	sampleRate,
+	duck,
 }: {
 	element: CollectedAudioElement;
 	outputBuffer: AudioBuffer;
 	outputLength: number;
 	sampleRate: number;
+	duck: ReturnType<typeof resolveDuckMix>;
 }): void {
 	const {
 		buffer,
@@ -586,7 +610,9 @@ function mixAudioChannels({
 		trimStart,
 		duration: elementDuration,
 		volume,
+		audioRole,
 	} = element;
+	const shouldDuck = duck.enabled && isDuckingCandidateRole(audioRole);
 
 	const sourceStartSample = Math.floor(trimStart * buffer.sampleRate);
 	const sourceLengthSamples = Math.floor(elementDuration * buffer.sampleRate);
@@ -616,8 +642,19 @@ function mixAudioChannels({
 					? sourceData[sourceIndex + 1]
 					: sample0;
 			const interpolated = sample0 + fraction * (sample1 - sample0);
+			const timelineTime = outputIndex / sampleRate;
+			const gain = shouldDuck
+				? gainAtTime({
+						t: timelineTime,
+						duckWindows: duck.windows,
+						baseVolume: volume,
+						duckVolume: duck.duckVolume,
+						attackMs: duck.attackMs ?? DUCK_ATTACK_MS,
+						releaseMs: duck.releaseMs ?? DUCK_RELEASE_MS,
+					})
+				: volume;
 
-			outputData[outputIndex] += interpolated * volume;
+			outputData[outputIndex] += interpolated * gain;
 		}
 	}
 }

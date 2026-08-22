@@ -1,5 +1,6 @@
-import { useSyncExternalStore, useMemo } from "react";
+import { useSyncExternalStore, useMemo, useState } from "react";
 import { useEditor } from "@/hooks/use-editor";
+import { usePlaybackFlags } from "@/hooks/use-playback";
 import { cn } from "@/utils/ui";
 import type {
 	TimelineElement,
@@ -14,6 +15,9 @@ import type { MediaAsset } from "@/types/assets";
 import { getTextScaleFactor } from "@/constants/text-constants";
 import { isBottomAlignedSubtitleText } from "@/lib/timeline/text-utils";
 import { resolveAnimatedProperties } from "@/lib/timeline/keyframe-utils";
+import { wrapText } from "@/services/renderer/nodes/text-node";
+import { getTextVerticalBounds } from "@/lib/preview/text-visual-bounds";
+import { resolveAnimatedTextSelectionState } from "@/lib/preview/text-selection-state";
 
 type ScaleHandle = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 type ResizeHandle = "left" | "right" | "top" | "bottom";
@@ -82,10 +86,8 @@ function computeMediaBounds({
 	const scaledW = mediaW * containScale * element.transform.scale;
 	const scaledH = mediaH * containScale * element.transform.scale;
 
-	const canvasX =
-		canvasWidth / 2 + element.transform.position.x - scaledW / 2;
-	const canvasY =
-		canvasHeight / 2 + element.transform.position.y - scaledH / 2;
+	const canvasX = canvasWidth / 2 + element.transform.position.x - scaledW / 2;
+	const canvasY = canvasHeight / 2 + element.transform.position.y - scaledH / 2;
 
 	return {
 		left: canvasX * displayScale,
@@ -96,7 +98,7 @@ function computeMediaBounds({
 	};
 }
 
-function computeTextBounds({
+export function computeTextBounds({
 	element,
 	canvasWidth,
 	canvasHeight,
@@ -111,44 +113,127 @@ function computeTextBounds({
 	const scaledFontSize = element.fontSize * scaleFactor;
 
 	const elementBoxWidth = element.boxWidth;
-	const hasBoxWidth =
-		elementBoxWidth !== undefined && elementBoxWidth > 0;
+	const hasBoxWidth = elementBoxWidth !== undefined && elementBoxWidth > 0;
 	const scaledBoxWidth = hasBoxWidth ? elementBoxWidth * scaleFactor : 0;
 
 	let estimatedWidth: number;
-	let estimatedHeight: number;
 	const elementScale = element.transform.scale;
+	const lineHeight = scaledFontSize * 1.3;
+	const isBottomAligned = isBottomAlignedSubtitleText({ element });
+	let actualTextWidth = 0;
+	let lineCount = 1;
+	let firstLineAscent = scaledFontSize * 0.8;
+	let lastLineDescent = scaledFontSize * 0.2;
+
+	if (typeof document !== "undefined") {
+		const measureCanvas = document.createElement("canvas");
+		const measureContext = measureCanvas.getContext("2d");
+		if (measureContext) {
+			measureContext.textBaseline = isBottomAligned ? "bottom" : "middle";
+			const fontWeight = element.fontWeight === "bold" ? "bold" : "normal";
+			const fontStyle = element.fontStyle === "italic" ? "italic" : "normal";
+			const fontFamily = element.fontFamily.includes('"')
+				? element.fontFamily
+				: `"${element.fontFamily}"`;
+			measureContext.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px ${fontFamily}, sans-serif`;
+			const lines = hasBoxWidth
+				? wrapText({
+						context: measureContext,
+						text: element.content,
+						maxWidth: scaledBoxWidth,
+					})
+				: element.content.split("\n");
+			lineCount = Math.max(1, lines.length);
+			actualTextWidth = Math.max(
+				...lines.map((line) => measureContext.measureText(line).width),
+				0,
+			);
+			const firstMetrics = measureContext.measureText(lines[0] ?? "");
+			const lastMetrics = measureContext.measureText(lines[lines.length - 1] ?? "");
+			firstLineAscent = Math.max(
+				firstMetrics.actualBoundingBoxAscent || 0,
+				scaledFontSize * 0.8,
+			);
+			lastLineDescent = Math.max(
+				lastMetrics.actualBoundingBoxDescent || 0,
+				scaledFontSize * 0.2,
+			);
+		}
+	}
 
 	if (hasBoxWidth) {
-		estimatedWidth = scaledBoxWidth;
-		const lineHeight = scaledFontSize * 1.3;
-		const charsPerLine = Math.max(
-			1,
-			Math.floor(scaledBoxWidth / (scaledFontSize * 0.6)),
-		);
-		const lineCount = Math.max(
-			1,
-			Math.ceil(element.content.length / charsPerLine),
-		);
-		estimatedHeight = lineCount * lineHeight;
+		estimatedWidth = actualTextWidth || scaledBoxWidth;
+		if (!actualTextWidth) {
+			const charsPerLine = Math.max(
+				1,
+				Math.floor(scaledBoxWidth / (scaledFontSize * 0.6)),
+			);
+			const paragraphs = element.content.split("\n");
+			lineCount = Math.max(
+				1,
+				paragraphs.reduce(
+					(sum, p) => sum + Math.max(1, Math.ceil(p.length / charsPerLine)),
+					0,
+				),
+			);
+		}
 	} else {
-		estimatedWidth = element.content.length * scaledFontSize * 0.6;
-		estimatedHeight = scaledFontSize * 1.4;
+		const lines = element.content.split("\n");
+		lineCount = Math.max(1, lines.length);
+		estimatedWidth = actualTextWidth ||
+			Math.max(...lines.map((l) => l.length), 1) * scaledFontSize * 0.6;
 	}
 
 	const centerX = canvasWidth / 2 + element.transform.position.x;
 	const baseY = canvasHeight / 2 + element.transform.position.y;
-	const isBottomAligned = isBottomAlignedSubtitleText({ element });
-	const scaledEstimatedWidth = estimatedWidth * elementScale;
-	const scaledEstimatedHeight = estimatedHeight * elementScale;
-	const topY = isBottomAligned
-		? baseY - scaledEstimatedHeight
-		: baseY - scaledEstimatedHeight / 2;
+	const hasBackground =
+		!!element.backgroundColor && element.backgroundColor !== "transparent";
+	const paddingX = hasBackground ? (element.backgroundPaddingX ?? 8) : 0;
+	const paddingY = hasBackground ? (element.backgroundPaddingY ?? 4) : 0;
+	// TextNode uses lineWidth = stroke.width * 2, so the visible stroke can
+	// extend roughly stroke.width pixels beyond the fill on every side.
+	const strokePadding = element.stroke?.width ?? 0;
+	const scaledEstimatedWidth =
+		(estimatedWidth + (paddingX + strokePadding) * 2) * elementScale;
+	const backgroundWidthRatio =
+		typeof element.backgroundWidthRatio === "number"
+			? Math.max(0, Math.min(100, element.backgroundWidthRatio))
+			: element.backgroundWidthMode === "full"
+				? 100
+				: 0;
+	const backgroundTargetWidth = hasBoxWidth ? scaledBoxWidth : estimatedWidth;
+	const widthWithBackground =
+		hasBackground && backgroundTargetWidth > estimatedWidth
+			? estimatedWidth +
+				(backgroundTargetWidth - estimatedWidth) * (backgroundWidthRatio / 100)
+			: estimatedWidth;
+	const finalWidth =
+		(widthWithBackground + (paddingX + strokePadding) * 2) * elementScale;
+	const visualWidth = hasBackground ? finalWidth : scaledEstimatedWidth;
+	const selectionWidth = hasBoxWidth
+		? Math.max(
+				visualWidth,
+				(scaledBoxWidth + (paddingX + strokePadding) * 2) * elementScale,
+			)
+		: visualWidth;
+	const verticalBounds = getTextVerticalBounds({
+		lineCount,
+		lineHeight,
+		ascent: firstLineAscent,
+		descent: lastLineDescent,
+		bottomAligned: isBottomAligned,
+		backgroundPaddingY: paddingY,
+		strokePadding,
+		shadowOffsetY: element.shadow?.offsetY ?? 0,
+		shadowBlur: element.shadow?.blur ?? 0,
+	});
+	const topY = baseY + verticalBounds.top * elementScale;
+	const scaledEstimatedHeight = verticalBounds.height * elementScale;
 
 	return {
-		left: (centerX - scaledEstimatedWidth / 2) * displayScale,
+		left: (centerX - selectionWidth / 2) * displayScale,
 		top: topY * displayScale,
-		width: scaledEstimatedWidth * displayScale,
+		width: selectionWidth * displayScale,
 		height: scaledEstimatedHeight * displayScale,
 		rotate: element.transform.rotate,
 	};
@@ -242,10 +327,10 @@ function computeElementBounds({
 	const isVisual = (
 		e: TimelineElement,
 	): e is VisualElement & {
-			transform: VisualElement["transform"];
-			opacity: number;
-			keyframes?: VisualElement["keyframes"];
-		} =>
+		transform: VisualElement["transform"];
+		opacity: number;
+		keyframes?: VisualElement["keyframes"];
+	} =>
 		e.type === "video" ||
 		e.type === "image" ||
 		e.type === "text" ||
@@ -279,13 +364,19 @@ function computeElementBounds({
 				canvasHeight,
 				displayScale,
 			});
-		case "text":
+		case "text": {
+			const animatedTextElement = resolveAnimatedTextSelectionState({
+				element: element as TextElement,
+				resolvedTransform,
+				localTime,
+			});
 			return computeTextBounds({
-				element: resolvedElement as TextElement,
+				element: animatedTextElement,
 				canvasWidth,
 				canvasHeight,
 				displayScale,
 			});
+		}
 		case "sticker":
 			return computeStickerBounds({
 				element: resolvedElement as StickerElement,
@@ -318,65 +409,109 @@ function ElementOverlay({
 	onScaleStart: ({
 		event,
 		handle,
-	}: { event: React.PointerEvent; handle: ScaleHandle }) => void;
+	}: {
+		event: React.PointerEvent;
+		handle: ScaleHandle;
+	}) => void;
 	onResizeStart?: ({
 		event,
 		handle,
-	}: { event: React.PointerEvent; handle: ResizeHandle }) => void;
+	}: {
+		event: React.PointerEvent;
+		handle: ResizeHandle;
+	}) => void;
 }) {
+	const [isHovered, setIsHovered] = useState(false);
 	const showResizeHandles =
 		(elementType === "text" || elementType === "blur-effect") && onResizeStart;
+	const shouldShowControls =
+		elementType === "text"
+			? isHovered || isTransforming
+			: elementType !== "blur-effect" || isHovered || isTransforming;
 
 	return (
 		<div
-			className="pointer-events-none absolute"
+			className={cn(
+				"absolute",
+				elementType === "blur-effect" || elementType === "text"
+					? "pointer-events-auto"
+					: "pointer-events-none",
+			)}
 			style={{
 				left: bounds.left,
 				top: bounds.top,
 				width: bounds.width,
 				height: bounds.height,
-				transform: bounds.rotate !== 0 ? `rotate(${bounds.rotate}deg)` : undefined,
+				transform:
+					bounds.rotate !== 0 ? `rotate(${bounds.rotate}deg)` : undefined,
 				transformOrigin: "center center",
 				zIndex: 1000,
 			}}
+			onPointerEnter={() => setIsHovered(true)}
+			onPointerLeave={() => setIsHovered(false)}
 		>
 			{/* Selection border */}
-			<div
-				className={cn(
-					"absolute inset-0 rounded border-2",
-					isTransforming ? "border-primary/70" : "border-primary",
-				)}
-			/>
+			{shouldShowControls &&
+				(elementType === "blur-effect" ? (
+					<div
+						className={cn(
+							"absolute inset-0 rounded-sm border-2 border-dashed border-amber-500 shadow-sm pointer-events-none",
+							isTransforming && "opacity-80",
+						)}
+					/>
+				) : (
+					<div
+						className={cn(
+							"absolute inset-0 rounded border-2",
+							isTransforming ? "border-primary/70" : "border-primary",
+						)}
+					/>
+				))}
 
 			{/* Corner handles (proportional scale) */}
-			{SCALE_HANDLES.map((handle) => (
-				<div
-					key={handle}
-					className="bg-primary border-background pointer-events-auto absolute rounded-sm border"
-					style={{
-						width: HANDLE_SIZE,
-						height: HANDLE_SIZE,
-						cursor: getHandleCursor({ handle }),
-						...getHandlePosition({ handle }),
-					}}
-					onPointerDown={(event) => {
-						event.stopPropagation();
-						onScaleStart({ event, handle });
-					}}
-				/>
-			))}
+			{shouldShowControls &&
+				SCALE_HANDLES.map((handle) => (
+					<div
+						key={handle}
+						className={cn(
+							"pointer-events-auto absolute transition-transform hover:scale-125",
+							elementType === "blur-effect"
+								? "bg-amber-400 border border-white size-3 rounded-full shadow-sm"
+								: "bg-background border-2 border-primary size-3 rounded-full shadow-xs",
+						)}
+						style={{
+							cursor: getHandleCursor({ handle }),
+							...(elementType === "blur-effect"
+								? {
+										...(handle.includes("left") ? { left: -6 } : { right: -6 }),
+										...(handle.includes("top") ? { top: -6 } : { bottom: -6 }),
+									}
+								: getHandlePosition({ handle })),
+						}}
+						onPointerDown={(event) => {
+							event.stopPropagation();
+							onScaleStart({ event, handle });
+						}}
+					/>
+				))}
 
-			{/* Side handles for text width resize */}
-			{showResizeHandles && (
+			{/* Side handles for text & blur-effect width resize */}
+			{shouldShowControls && showResizeHandles && (
 				<>
 					{/* Left handle */}
 					<div
-						className="bg-primary border-background pointer-events-auto absolute rounded-sm border"
+						className={cn(
+							"pointer-events-auto absolute border transition-transform hover:scale-110",
+							elementType === "blur-effect"
+								? "bg-amber-400 border-white size-2 rounded-full"
+								: "bg-primary border-background rounded-sm",
+						)}
 						style={{
-							width: RESIZE_HANDLE_WIDTH,
-							height: RESIZE_HANDLE_HEIGHT,
+							width: elementType === "blur-effect" ? 8 : RESIZE_HANDLE_WIDTH,
+							height: elementType === "blur-effect" ? 18 : RESIZE_HANDLE_HEIGHT,
 							cursor: "ew-resize",
-							left: -RESIZE_HANDLE_WIDTH / 2,
+							left:
+								elementType === "blur-effect" ? -4 : -RESIZE_HANDLE_WIDTH / 2,
 							top: "50%",
 							transform: "translateY(-50%)",
 						}}
@@ -387,12 +522,18 @@ function ElementOverlay({
 					/>
 					{/* Right handle */}
 					<div
-						className="bg-primary border-background pointer-events-auto absolute rounded-sm border"
+						className={cn(
+							"pointer-events-auto absolute border transition-transform hover:scale-110",
+							elementType === "blur-effect"
+								? "bg-amber-400 border-white size-2 rounded-full"
+								: "bg-primary border-background rounded-sm",
+						)}
 						style={{
-							width: RESIZE_HANDLE_WIDTH,
-							height: RESIZE_HANDLE_HEIGHT,
+							width: elementType === "blur-effect" ? 8 : RESIZE_HANDLE_WIDTH,
+							height: elementType === "blur-effect" ? 18 : RESIZE_HANDLE_HEIGHT,
 							cursor: "ew-resize",
-							right: -RESIZE_HANDLE_WIDTH / 2,
+							right:
+								elementType === "blur-effect" ? -4 : -RESIZE_HANDLE_WIDTH / 2,
 							top: "50%",
 							transform: "translateY(-50%)",
 						}}
@@ -405,17 +546,17 @@ function ElementOverlay({
 			)}
 
 			{/* Top/bottom handles for blur-effect height resize */}
-			{elementType === "blur-effect" && onResizeStart && (
+			{shouldShowControls && elementType === "blur-effect" && onResizeStart && (
 				<>
 					{/* Top handle */}
 					<div
-						className="bg-primary border-background pointer-events-auto absolute rounded-sm border"
+						className="pointer-events-auto absolute border transition-transform hover:scale-110 bg-amber-400 border-white rounded-full"
 						style={{
-							width: RESIZE_HANDLE_HEIGHT,
-							height: RESIZE_HANDLE_WIDTH,
+							width: 18,
+							height: 8,
 							cursor: "ns-resize",
-							top: -RESIZE_HANDLE_WIDTH / 2,
 							left: "50%",
+							top: -4,
 							transform: "translateX(-50%)",
 						}}
 						onPointerDown={(event) => {
@@ -425,13 +566,13 @@ function ElementOverlay({
 					/>
 					{/* Bottom handle */}
 					<div
-						className="bg-primary border-background pointer-events-auto absolute rounded-sm border"
+						className="pointer-events-auto absolute border transition-transform hover:scale-110 bg-amber-400 border-white rounded-full"
 						style={{
-							width: RESIZE_HANDLE_HEIGHT,
-							height: RESIZE_HANDLE_WIDTH,
+							width: 18,
+							height: 8,
 							cursor: "ns-resize",
-							bottom: -RESIZE_HANDLE_WIDTH / 2,
 							left: "50%",
+							bottom: -4,
 							transform: "translateX(-50%)",
 						}}
 						onPointerDown={(event) => {
@@ -483,6 +624,7 @@ export function SelectionOverlay({
 		() => editor.selection.getSelectedElements(),
 	);
 
+	const { isPlaying } = usePlaybackFlags();
 	const currentTime = editor.playback.getCurrentTime();
 	const activeProject = editor.project.getActive();
 	const mediaAssets = editor.media.getAssets();
@@ -507,7 +649,7 @@ export function SelectionOverlay({
 		);
 	});
 
-	if (visibleElements.length === 0 || displaySize.width === 0) {
+	if (isPlaying || visibleElements.length === 0 || displaySize.width === 0) {
 		return null;
 	}
 
@@ -515,9 +657,7 @@ export function SelectionOverlay({
 		<>
 			{visibleElements.map(({ track, element }) => {
 				const media =
-					"mediaId" in element
-						? mediaMap.get(element.mediaId)
-						: undefined;
+					"mediaId" in element ? mediaMap.get(element.mediaId) : undefined;
 
 				const bounds = computeElementBounds({
 					element,

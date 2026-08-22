@@ -25,6 +25,19 @@ export interface TCanvasSize {
 	height: number;
 }
 
+/** A burned-in subtitle event detected directly from the source video. */
+export interface OriginalSubtitleCue {
+	id: string;
+	mediaId: string;
+	videoElementId: string;
+	startTime: number;
+	endTime: number;
+	/** Normalized bounds on the editor canvas at scan time. */
+	bounds: { x: number; y: number; width: number; height: number };
+	confidence: number;
+	roiId?: string;
+}
+
 export interface TProjectMetadata {
 	id: string;
 	name: string;
@@ -39,6 +52,8 @@ export interface TProjectSettings {
 	canvasSize: TCanvasSize;
 	originalCanvasSize?: TCanvasSize | null;
 	background: TBackground;
+	/** Detector-only scan results for subtitles burned into the source video. */
+	originalSubtitleCues?: OriginalSubtitleCue[];
 }
 
 export interface TTimelineViewState {

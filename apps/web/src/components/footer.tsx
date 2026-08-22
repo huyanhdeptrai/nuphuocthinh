@@ -25,12 +25,12 @@ export function Footer() {
 					<Link href="/" className="flex items-center gap-2">
 						<Image
 							src={DEFAULT_LOGO_URL}
-							alt="Editkub"
+							alt="Lemyloi-dichvideo"
 								width={28}
 								height={28}
 							className="dark:invert"
 						/>
-						<span className="text-sm font-semibold">Editkub</span>
+						<span className="text-sm font-semibold">Lemyloi-dichvideo</span>
 					</Link>
 					<nav className="flex items-center gap-4">
 						{footerLinks.map((link) => (
@@ -73,7 +73,7 @@ export function Footer() {
 							<SiBuymeacoffee className="size-4" />
 						</a>
 					<span className="text-muted-foreground ml-2 text-xs">
-						© {new Date().getFullYear()} Editkub
+						© {new Date().getFullYear()} Lemyloi-dichvideo
 					</span>
 				</div>
 			</div>

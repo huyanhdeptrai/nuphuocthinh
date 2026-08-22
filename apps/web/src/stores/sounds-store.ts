@@ -1,5 +1,6 @@
 import { i18next } from "@/lib/i18n";
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { SoundEffect, SavedSound } from "@/types/sounds";
 import { storageService } from "@/services/storage/service";
 import { toast } from "sonner";
@@ -7,6 +8,8 @@ import { EditorCore } from "@/core";
 import { buildLibraryAudioElement } from "@/lib/timeline/element-utils";
 
 interface SoundsStore {
+	freesoundApiKey: string;
+	setFreesoundApiKey: (key: string) => void;
 	topSoundEffects: SoundEffect[];
 	isLoading: boolean;
 	error: string | null;
@@ -62,16 +65,20 @@ interface SoundsStore {
 	clearSavedSounds: () => Promise<void>;
 }
 
-export const useSoundsStore = create<SoundsStore>((set, get) => ({
-	topSoundEffects: [],
-	isLoading: false,
-	error: null,
-	hasLoaded: false,
-	showCommercialOnly: true,
+export const useSoundsStore = create<SoundsStore>()(
+	persist(
+		(set, get) => ({
+			freesoundApiKey: "",
+			setFreesoundApiKey: (key) => set({ freesoundApiKey: key }),
+			topSoundEffects: [],
+			isLoading: false,
+			error: null,
+			hasLoaded: false,
+			showCommercialOnly: true,
 
-	toggleCommercialFilter: () => {
-		set((state) => ({ showCommercialOnly: !state.showCommercialOnly }));
-	},
+			toggleCommercialFilter: () => {
+				set((state) => ({ showCommercialOnly: !state.showCommercialOnly }));
+			},
 
 	searchQuery: "",
 	searchResults: [],
@@ -249,4 +256,13 @@ export const useSoundsStore = create<SoundsStore>((set, get) => ({
 			return false;
 		}
 	},
-}));
+}),
+		{
+			name: "sounds-settings",
+			partialize: (state) => ({
+				freesoundApiKey: state.freesoundApiKey,
+				showCommercialOnly: state.showCommercialOnly,
+			}),
+		},
+	),
+);

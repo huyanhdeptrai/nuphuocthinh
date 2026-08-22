@@ -1,4 +1,5 @@
 import type { CanvasRenderer } from "../canvas-renderer";
+import { loadCachedImage } from "../image-cache";
 import { VisualNode, type VisualNodeParams } from "./visual-node";
 
 export interface ImageNodeParams extends VisualNodeParams {
@@ -15,15 +16,7 @@ export class ImageNode extends VisualNode<ImageNodeParams> {
 	}
 
 	private async load() {
-		const image = new Image();
-		image.crossOrigin = "anonymous";
-		this.image = image;
-
-		await new Promise<void>((resolve, reject) => {
-			image.onload = () => resolve();
-			image.onerror = () => reject(new Error("Image load failed"));
-			image.src = this.params.url;
-		});
+		this.image = await loadCachedImage(this.params.url);
 	}
 
 	async render({ renderer, time }: { renderer: CanvasRenderer; time: number }) {
@@ -46,6 +39,7 @@ export class ImageNode extends VisualNode<ImageNodeParams> {
 			source: this.image,
 			sourceWidth: mediaW,
 			sourceHeight: mediaH,
+			renderer,
 		});
 		this.renderVisual({ renderer, ...masked, time });
 	}

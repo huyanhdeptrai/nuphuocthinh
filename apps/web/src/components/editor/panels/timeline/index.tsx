@@ -21,6 +21,7 @@ import { useTimelineZoom } from "@/hooks/timeline/use-timeline-zoom";
 import { useState, useRef, useCallback } from "react";
 import { TimelineTrackContent } from "./timeline-track";
 import { TimelinePlayhead } from "./timeline-playhead";
+import { TrackVolumeControl } from "./volume-control";
 import { SelectionBox } from "../../selection-box";
 import { useSelectionBox } from "@/hooks/timeline/use-selection-box";
 import { SnapIndicator } from "./snap-indicator";
@@ -290,24 +291,21 @@ export function Timeline() {
 														}
 													}}
 												/>
-												<div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+												<div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 overflow-hidden">
+													{track.name?.startsWith("Thuyết minh - ") && (
+														<span
+															className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-muted/80 text-foreground truncate max-w-[80px]"
+															title={track.name}
+														>
+															{track.name.replace("Thuyết minh - ", "")}
+														</span>
+													)}
 													{IS_DEV &&
 														isMainTrack(track) && (
 															<div className="bg-red-500 size-1.5 rounded-full" />
 														)}
 													{canTracktHaveAudio(track) && (
-														<TrackToggleIcon
-															isOff={track.muted}
-															icons={{
-																on: VolumeHighIcon,
-																off: VolumeOffIcon,
-															}}
-															onClick={() =>
-																editor.timeline.toggleTrackMute({
-																	trackId: track.id,
-																})
-															}
-														/>
+														<TrackVolumeControl track={track} />
 													)}
 													{canTrackBeHidden(track) && (
 														<TrackToggleIcon

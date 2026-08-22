@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./public/locales/**/*"],
   },
-  transpilePackages: ["@editkub/ui", "@editkub/env"],
+  transpilePackages: ["@lemyloi-dichvideo/ui", "@lemyloi-dichvideo/env"],
   images: {
     remotePatterns: [
       {

@@ -21,5 +21,25 @@ bun.lockb
 .DS_Store
 .zcode/
 
+# Local development server logs
+.codex-dev-server*.log
+
 # ffmpeg.wasm core (31MB, copied from node_modules via scripts/setup-ffmpeg.sh)
 apps/web/public/ffmpeg/
+
+# Local TTS/ASR runtimes and credentials (junction to ../.local-services)
+.local-services/
+
+# Local pyannote weights (moved from parent OpenCut tree)
+bundled-models/
+
+# Local build outputs, test captures, and generated Python caches.
+apps/desktop/dist/
+apps/desktop/dist-*/
+dist-tts-packs*/
+output/
+.playwright-cli/
+.codegraph/
+__pycache__/
+*.pyc
+verify_*.png

@@ -4,6 +4,7 @@ export class PlaybackManager {
 	private isPlaying = false;
 	private currentTime = 0;
 	private volume = 1;
+	private playbackRate = 1;
 	private muted = false;
 	private previousVolume = 1;
 	private isScrubbing = false;
@@ -11,7 +12,29 @@ export class PlaybackManager {
 	private playbackTimer: number | null = null;
 	private lastUpdate = 0;
 
-	constructor(private editor: EditorCore) {}
+	constructor(private editor: EditorCore) {
+		this.setPlaybackRate = this.setPlaybackRate.bind(this);
+		this.getPlaybackRate = this.getPlaybackRate.bind(this);
+	}
+
+	setPlaybackRate({ rate }: { rate: number }): void {
+		const clamped = Math.max(0.1, Math.min(4, rate));
+		this.playbackRate = clamped;
+		this.lastUpdate = performance.now();
+		this.notify();
+
+		if (typeof window !== "undefined") {
+			window.dispatchEvent(
+				new CustomEvent("playback-rate-change", {
+					detail: { rate: this.playbackRate },
+				}),
+			);
+		}
+	}
+
+	getPlaybackRate(): number {
+		return this.playbackRate ?? 1;
+	}
 
 	play(): void {
 		const duration = this.editor.timeline.getTotalDuration();
@@ -143,7 +166,7 @@ export class PlaybackManager {
 		const delta = (now - this.lastUpdate) / 1000;
 		this.lastUpdate = now;
 
-		const newTime = this.currentTime + delta;
+		const newTime = this.currentTime + delta * this.playbackRate;
 		const duration = this.editor.timeline.getTotalDuration();
 
 		if (duration > 0 && newTime >= duration) {
@@ -158,7 +181,6 @@ export class PlaybackManager {
 			);
 		} else {
 			this.currentTime = newTime;
-			this.notify();
 
 			window.dispatchEvent(
 				new CustomEvent("playback-update", {

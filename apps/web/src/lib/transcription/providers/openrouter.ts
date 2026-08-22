@@ -23,8 +23,6 @@ export const openrouterProvider: RemoteTranscriptionProvider = {
 	requiresApiKey: true,
 	models: [
 		{ id: "openai/gpt-transcribe", name: "GPT Transcribe (Best)" },
-		{ id: "openai/gpt-4o-transcribe", name: "GPT-4o Transcribe" },
-		{ id: "openai/gpt-4o-mini-transcribe", name: "GPT-4o Mini Transcribe" },
 		{
 			id: "openai/whisper-large-v3-turbo",
 			name: "Whisper Large v3 Turbo",

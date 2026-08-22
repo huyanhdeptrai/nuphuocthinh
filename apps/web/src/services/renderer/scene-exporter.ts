@@ -124,9 +124,9 @@ export class SceneExporter extends EventEmitter<SceneExporterEvents> {
 				return null;
 			}
 
-			const time = i / fps;
-			await this.renderer.render({ node: rootNode, time });
-			await videoSource.add(time, 1 / fps);
+				const time = i / fps;
+				await this.renderer.render({ node: rootNode, time });
+				await videoSource.add(time, 1 / fps);
 
 			this.emit("progress", i / frameCount);
 		}

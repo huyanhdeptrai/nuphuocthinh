@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
 // ponytail: single kill switch for all AI/proxy routes.
-// Set EDITKUB_AI_ENABLED=true in env to enable. Omit to disable (demo mode).
+// Set LEMYLOI_DICHVIDEO_AI_ENABLED=true in env to enable. Omit to disable (demo mode).
 export function isAiEnabled(): boolean {
-	return process.env.EDITKUB_AI_ENABLED === "true";
+	return process.env.LEMYLOI_DICHVIDEO_AI_ENABLED === "true";
 }
 
 export function disabledResponse() {

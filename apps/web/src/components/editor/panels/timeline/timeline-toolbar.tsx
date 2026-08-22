@@ -1,6 +1,7 @@
 "use client";
 
 import { useEditor } from "@/hooks/use-editor";
+import { usePlaybackTime } from "@/hooks/use-playback";
 import { useTranslation } from "@i18next-toolkit/nextjs-approuter";
 import {
 	TooltipProvider,
@@ -39,6 +40,10 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useVoiceoverStore } from "@/stores/voiceover-store";
 import { toast } from "sonner";
+import {
+	VoiceReductionToolbarControl,
+	AutoDuckingToolbarControl,
+} from "./audio-toolbar-controls";
 
 export function TimelineToolbar({
 	zoomLevel,
@@ -79,7 +84,7 @@ export function TimelineToolbar({
 function ToolbarLeftSection() {
 	const { t } = useTranslation();
 	const editor = useEditor();
-	const currentTime = editor.playback.getCurrentTime();
+	const currentTime = usePlaybackTime({ throttleMs: 120 });
 	const currentBookmarked = editor.scenes.isBookmarked({ time: currentTime });
 	const voiceoverMode = useVoiceoverStore((s) => s.mode);
 	const startCountdown = useVoiceoverStore((s) => s.startCountdown);
@@ -214,6 +219,11 @@ function ToolbarLeftSection() {
 					}
 					onClick={() => handleVoiceoverToggle()}
 				/>
+
+				<div className="bg-border mx-1 h-6 w-px" />
+
+				<VoiceReductionToolbarControl />
+				<AutoDuckingToolbarControl />
 			</TooltipProvider>
 		</div>
 	);

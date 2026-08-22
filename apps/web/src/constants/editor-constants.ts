@@ -13,6 +13,7 @@ export const PANEL_CONFIG = {
 		properties: 25,
 		mainContent: 50,
 		timeline: 50,
+		subtitles: 28,
 		agent: 20,
 	},
 };
@@ -24,6 +25,7 @@ export const VERTICAL_PANEL_CONFIG = {
 		properties: 25,
 		mainContent: 50,
 		timeline: 50,
+		subtitles: 28,
 		agent: 20,
 	},
 };

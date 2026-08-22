@@ -28,6 +28,11 @@ export class TransitionNode extends BaseNode<TransitionNodeParams> {
 		this.incoming = params.incomingNode;
 	}
 
+	shouldRender(time: number): boolean {
+		if (this.getProgress({ time }) !== null) return true;
+		return this.outgoing.shouldRender(time) || this.incoming.shouldRender(time);
+	}
+
 	private getProgress({ time }: { time: number }): number | null {
 		const { transitionStart, duration } = this.params;
 		if (time < transitionStart || time >= transitionStart + duration) {
@@ -93,7 +98,10 @@ export class TransitionNode extends BaseNode<TransitionNodeParams> {
 		}
 
 		const { width, height } = renderer;
-		const { canvasA, canvasB } = this.ensureOffscreen({ width, height });
+		const { canvasA, canvasB } = this.ensureOffscreen({
+			width: renderer.bufferWidth,
+			height: renderer.bufferHeight,
+		});
 
 		const ctxA = canvasA.getContext("2d") as Canvas2DContext | null;
 		const ctxB = canvasB.getContext("2d") as Canvas2DContext | null;
@@ -101,12 +109,15 @@ export class TransitionNode extends BaseNode<TransitionNodeParams> {
 			throw new Error("Failed to get offscreen canvas context");
 		}
 
-		ctxA.clearRect(0, 0, width, height);
-		ctxB.clearRect(0, 0, width, height);
+		ctxA.setTransform(1, 0, 0, 1, 0, 0);
+		ctxB.setTransform(1, 0, 0, 1, 0, 0);
+		ctxA.clearRect(0, 0, renderer.bufferWidth, renderer.bufferHeight);
+		ctxB.clearRect(0, 0, renderer.bufferWidth, renderer.bufferHeight);
+		renderer.applyViewTransform(ctxA);
+		renderer.applyViewTransform(ctxB);
 
 		const originalContext = renderer.context;
 
-		// clamp so each element stays in its valid range during the transition
 		const outgoingTime = Math.min(time, this.params.outgoingEndTime - 1 / 1000);
 		const incomingTime = Math.max(time, this.params.incomingStartTime);
 

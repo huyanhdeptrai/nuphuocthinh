@@ -49,8 +49,13 @@ export function useSoundSearch({
 			}
 
 			searchParams.set("commercial_only", commercialOnly.toString());
+			const freesoundApiKey = useSoundsStore.getState().freesoundApiKey;
+			const headers: Record<string, string> = {};
+			if (freesoundApiKey) headers["x-freesound-api-key"] = freesoundApiKey;
+
 			const response = await fetch(
 				`/api/sounds/search?${searchParams.toString()}`,
+				{ headers },
 			);
 
 			if (response.ok) {
@@ -101,8 +106,13 @@ export function useSoundSearch({
 				setSearchError({ error: null });
 				resetPagination();
 
+				const freesoundApiKey = useSoundsStore.getState().freesoundApiKey;
+				const headers: Record<string, string> = {};
+				if (freesoundApiKey) headers["x-freesound-api-key"] = freesoundApiKey;
+
 				const response = await fetch(
 					`/api/sounds/search?q=${encodeURIComponent(query)}&type=effects&page=1`,
+					{ headers },
 				);
 
 				if (!ignore) {

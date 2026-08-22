@@ -1,13 +1,13 @@
 {
-  "name": "Editkub",
+  "name": "Lemyloi-dichvideo",
   "description": "A simple but powerful video editor that gets the job done. In your browser.",
   "display": "standalone",
   "start_url": "/",
   "icons": [
     {
-      "src": "/logos/editkub/svg/logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "/logos/lemyloi-dichvideo/logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
     }
   ]
 }

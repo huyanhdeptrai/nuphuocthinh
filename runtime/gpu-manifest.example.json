@@ -1,0 +1,15 @@
+{
+  "id": "runtime-ml-cuda",
+  "version": "2.8.0-cu126",
+  "minVramMb": 4096,
+  "size": 0,
+  "sha256": "REPLACE_WITH_FULL_ZIP_SHA256",
+  "parts": [
+    {
+      "name": "runtime-ml-cuda-2.8.0-cu126.zip.001",
+      "url": "https://github.com/OWNER/REPO/releases/download/gpu-2.8.0-cu126/runtime-ml-cuda-2.8.0-cu126.zip.001",
+      "sha256": "REPLACE_PART_SHA256",
+      "size": 0
+    }
+  ]
+}

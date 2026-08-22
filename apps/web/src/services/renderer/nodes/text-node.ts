@@ -5,7 +5,7 @@ import { getTextScaleFactor } from "@/constants/text-constants";
 import { resolveAnimatedProperties } from "@/lib/timeline/keyframe-utils";
 import { resolveTextAnimations } from "@/lib/timeline/text-animation-utils";
 
-type RenderContext =
+export type RenderContext =
 	| CanvasRenderingContext2D
 	| OffscreenCanvasRenderingContext2D;
 
@@ -33,7 +33,25 @@ export function scaleBoxWidth({
 	return boxWidth * getTextScaleFactor({ canvasWidth, canvasHeight });
 }
 
-function wrapText({
+export function getMultilineStartY({
+	lineCount,
+	lineHeight,
+	textBaseline,
+}: {
+	lineCount: number;
+	lineHeight: number;
+	textBaseline: CanvasTextBaseline;
+}): number {
+	if (textBaseline === "bottom") {
+		// Keep the last line's baseline at the element origin. The selection
+		// bounds use the full line box above that origin, so starting at
+		// -totalHeight would shift every subtitle line one line too high.
+		return -(Math.max(1, lineCount) - 1) * lineHeight;
+	}
+	return -(Math.max(1, lineCount) * lineHeight) / 2 + lineHeight / 2;
+}
+
+export function wrapText({
 	context,
 	text,
 	maxWidth,
@@ -42,6 +60,8 @@ function wrapText({
 	text: string;
 	maxWidth: number;
 }): string[] {
+	if (maxWidth <= 0) return text.split("\n");
+
 	const lines: string[] = [];
 	const paragraphs = text.split("\n");
 
@@ -51,23 +71,66 @@ function wrapText({
 			continue;
 		}
 
-		const chars = Array.from(paragraph);
+		// Split paragraph into tokens while preserving whitespace delimiters
+		const tokens = paragraph.split(/(\s+)/).filter(Boolean);
 		let currentLine = "";
 
-		for (const char of chars) {
-			const testLine = currentLine + char;
+		for (const token of tokens) {
+			// If this token is whitespace and we're starting a new line, skip leading whitespace
+			if (/^\s+$/.test(token) && currentLine === "") {
+				continue;
+			}
+
+			const testLine = currentLine + token;
 			const metrics = context.measureText(testLine);
 
-			if (metrics.width > maxWidth && currentLine !== "") {
-				lines.push(currentLine);
-				currentLine = char;
+			if (metrics.width > maxWidth && currentLine.trim() !== "") {
+				lines.push(currentLine.trimEnd());
+
+				if (/^\s+$/.test(token)) {
+					currentLine = "";
+				} else if (context.measureText(token).width > maxWidth) {
+					// Fallback for an abnormally long single word exceeding maxWidth: break by character
+					let charChunk = "";
+					for (const char of Array.from(token)) {
+						const testChar = charChunk + char;
+						if (
+							context.measureText(testChar).width > maxWidth &&
+							charChunk !== ""
+						) {
+							lines.push(charChunk);
+							charChunk = char;
+						} else {
+							charChunk = testChar;
+						}
+					}
+					currentLine = charChunk;
+				} else {
+					currentLine = token;
+				}
+			} else if (metrics.width > maxWidth && currentLine === "") {
+				// Single token alone exceeds maxWidth: break by character
+				let charChunk = "";
+				for (const char of Array.from(token)) {
+					const testChar = charChunk + char;
+					if (
+						context.measureText(testChar).width > maxWidth &&
+						charChunk !== ""
+					) {
+						lines.push(charChunk);
+						charChunk = char;
+					} else {
+						charChunk = testChar;
+					}
+				}
+				currentLine = charChunk;
 			} else {
 				currentLine = testLine;
 			}
 		}
 
-		if (currentLine !== "") {
-			lines.push(currentLine);
+		if (currentLine.trim() !== "") {
+			lines.push(currentLine.trimEnd());
 		}
 	}
 
@@ -82,11 +145,34 @@ export type TextNodeParams = TextElement & {
 };
 
 export class TextNode extends BaseNode<TextNodeParams> {
+	private wrapCacheKey = "";
+	private wrapCacheLines: string[] = [];
+
 	isInRange({ time }: { time: number }) {
 		return (
 			time >= this.params.startTime &&
 			time < this.params.startTime + this.params.duration
 		);
+	}
+
+	shouldRender(time: number): boolean {
+		return this.isInRange({ time });
+	}
+
+	private getWrappedLines({
+		context,
+		text,
+		maxWidth,
+	}: {
+		context: RenderContext;
+		text: string;
+		maxWidth: number;
+	}): string[] {
+		const key = `${text}\0${maxWidth}\0${context.font}`;
+		if (key === this.wrapCacheKey) return this.wrapCacheLines;
+		this.wrapCacheKey = key;
+		this.wrapCacheLines = wrapText({ context, text, maxWidth });
+		return this.wrapCacheLines;
 	}
 
 	async render({ renderer, time }: { renderer: CanvasRenderer; time: number }) {
@@ -138,7 +224,10 @@ export class TextNode extends BaseNode<TextNodeParams> {
 			canvasWidth: this.params.canvasWidth,
 			canvasHeight: this.params.canvasHeight,
 		});
-		renderer.context.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px ${this.params.fontFamily}`;
+		const fontFamily = this.params.fontFamily.includes('"')
+			? this.params.fontFamily
+			: `"${this.params.fontFamily}"`;
+		renderer.context.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px ${fontFamily}, sans-serif`;
 		renderer.context.textAlign = this.params.textAlign;
 		renderer.context.textBaseline = textBaseline;
 		renderer.context.fillStyle = this.params.color;
@@ -155,23 +244,25 @@ export class TextNode extends BaseNode<TextNodeParams> {
 					canvasHeight: this.params.canvasHeight,
 				})
 			: 0;
+		const hasNewlines = effectiveContent.includes("\n");
 
-		if (hasBoxWidth) {
+		if (hasBoxWidth || hasNewlines) {
 			this.renderMultiline({
 				context: renderer.context,
 				scaledFontSize,
-			scaledBoxWidth,
-			textBaseline,
-			contentOverride: effectiveContent,
-		});
-	} else {
+				scaledBoxWidth,
+				textBaseline,
+				contentOverride: effectiveContent,
+			});
+		} else {
 			this.renderSingleLine({
 				context: renderer.context,
-			scaledFontSize,
-			textBaseline,
-			contentOverride: effectiveContent,
-		});
-	}
+				scaledFontSize,
+				scaledBoxWidth,
+				textBaseline,
+				contentOverride: effectiveContent,
+			});
+		}
 
 		renderer.context.globalAlpha = prevAlpha;
 		renderer.context.restore();
@@ -180,11 +271,13 @@ export class TextNode extends BaseNode<TextNodeParams> {
 	private renderSingleLine({
 		context,
 		scaledFontSize,
+		scaledBoxWidth = 0,
 		textBaseline,
 		contentOverride,
 	}: {
 		context: RenderContext;
 		scaledFontSize: number;
+		scaledBoxWidth?: number;
 		textBaseline: CanvasTextBaseline;
 		contentOverride?: string;
 	}) {
@@ -200,18 +293,31 @@ export class TextNode extends BaseNode<TextNodeParams> {
 			const padY = this.params.backgroundPaddingY ?? 4;
 			const borderRadius = this.params.backgroundBorderRadius ?? 0;
 
+			const ratio =
+				typeof this.params.backgroundWidthRatio === "number"
+					? Math.max(0, Math.min(100, this.params.backgroundWidthRatio)) / 100
+					: this.params.backgroundWidthMode === "full"
+						? 1
+						: 0;
+
+			const targetFullWidth = scaledBoxWidth > 0 ? scaledBoxWidth : textW;
+			const effectiveBgWidth =
+				targetFullWidth > textW
+					? textW + (targetFullWidth - textW) * ratio
+					: textW;
+
 			const prevAlpha = context.globalAlpha;
 			const bgOpacity = this.params.backgroundOpacity ?? 1;
 			context.globalAlpha = prevAlpha * bgOpacity;
 
 			context.fillStyle = this.params.backgroundColor;
-			let bgLeft = -textW / 2;
-			if (context.textAlign === "left") bgLeft = 0;
-			if (context.textAlign === "right") bgLeft = -textW;
+			let bgLeft = -effectiveBgWidth / 2;
+			if (context.textAlign === "left") bgLeft = -effectiveBgWidth / 2;
+			if (context.textAlign === "right") bgLeft = -effectiveBgWidth / 2;
 
 			const backgroundTop =
 				textBaseline === "bottom" ? -textH - padY : -textH / 2 - padY;
-			const bgW = textW + padX * 2;
+			const bgW = effectiveBgWidth + padX * 2;
 			const bgH = textH + padY * 2;
 			const bgX = bgLeft - padX;
 
@@ -265,45 +371,74 @@ export class TextNode extends BaseNode<TextNodeParams> {
 		contentOverride?: string;
 	}) {
 		const content = contentOverride ?? this.params.content;
-		const lines = wrapText({
-			context,
-			text: content,
-			maxWidth: scaledBoxWidth,
-		});
+		const lines =
+			scaledBoxWidth > 0
+				? this.getWrappedLines({
+						context,
+						text: content,
+						maxWidth: scaledBoxWidth,
+					})
+				: content.split("\n");
 
 		const lineHeight = scaledFontSize * 1.3;
 		const totalHeight = lines.length * lineHeight;
 
-		let startY: number;
-		if (textBaseline === "bottom") {
-			startY = -totalHeight;
-		} else {
-			startY = -totalHeight / 2 + lineHeight / 2;
-		}
+		const startY = getMultilineStartY({
+			lineCount: lines.length,
+			lineHeight,
+			textBaseline,
+		});
 
-		context.textBaseline = "middle";
+		const actualTextWidth = Math.max(
+			...lines.map((line) => context.measureText(line).width),
+			0,
+		);
+
+		const ratio =
+			typeof this.params.backgroundWidthRatio === "number"
+				? Math.max(0, Math.min(100, this.params.backgroundWidthRatio)) / 100
+				: this.params.backgroundWidthMode === "full"
+					? 1
+					: 0;
+
+		const targetFullWidth = scaledBoxWidth > 0 ? scaledBoxWidth : actualTextWidth;
+		const effectiveBgWidth =
+			targetFullWidth > actualTextWidth
+				? actualTextWidth + (targetFullWidth - actualTextWidth) * ratio
+				: actualTextWidth;
 
 		let textX = 0;
 		if (context.textAlign === "left") {
-			textX = -scaledBoxWidth / 2;
+			textX = -effectiveBgWidth / 2;
 		} else if (context.textAlign === "right") {
-			textX = scaledBoxWidth / 2;
+			textX = effectiveBgWidth / 2;
 		}
 
 		if (this.params.backgroundColor && this.params.backgroundColor !== "transparent") {
 			const padX = this.params.backgroundPaddingX ?? 8;
 			const padY = this.params.backgroundPaddingY ?? 4;
 			const borderRadius = this.params.backgroundBorderRadius ?? 0;
+			const firstMetrics = context.measureText(lines[0] ?? "");
+			const lastMetrics = context.measureText(lines[lines.length - 1] ?? "");
+			const ascent = Math.max(
+				firstMetrics.actualBoundingBoxAscent ?? scaledFontSize * 0.8,
+				scaledFontSize * 0.8,
+			);
+			const descent = Math.max(
+				lastMetrics.actualBoundingBoxDescent ?? scaledFontSize * 0.2,
+				scaledFontSize * 0.2,
+			);
 
 			const prevAlpha = context.globalAlpha;
 			const bgOpacity = this.params.backgroundOpacity ?? 1;
 			context.globalAlpha = prevAlpha * bgOpacity;
 
 			context.fillStyle = this.params.backgroundColor;
-			const bgX = -scaledBoxWidth / 2 - padX;
-			const bgY = startY - lineHeight / 2 - padY;
-			const bgW = scaledBoxWidth + padX * 2;
-			const bgH = totalHeight + padY * 2;
+			const bgX = -effectiveBgWidth / 2 - padX;
+			const bgY = startY - ascent - padY;
+			const bgW = effectiveBgWidth + padX * 2;
+			const bgH =
+				(lines.length - 1) * lineHeight + ascent + descent + padY * 2;
 
 			if (borderRadius > 0 && context.roundRect) {
 				context.beginPath();

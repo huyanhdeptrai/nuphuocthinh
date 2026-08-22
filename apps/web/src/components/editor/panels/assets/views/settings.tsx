@@ -43,6 +43,7 @@ import { REMOTE_PROVIDERS } from "@/lib/transcription/providers";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Slider } from "@/components/ui/slider";
 import type { TBackground } from "@/types/project";
+import { useAssetsPanelStore } from "@/stores/assets-panel-store";
 
 export function SettingsView() {
 	return <ProjectSettingsTabs />;
@@ -50,10 +51,18 @@ export function SettingsView() {
 
 function ProjectSettingsTabs() {
 	const { t } = useTranslation();
+	const settingsTab = useAssetsPanelStore((s) => s.settingsTab);
+	const setSettingsTab = useAssetsPanelStore((s) => s.setSettingsTab);
 
 	return (
 		<BaseView
 			defaultTab="project-info"
+			value={settingsTab === "background" ? "project-info" : settingsTab}
+			onValueChange={(value) => {
+				if (value === "project-info" || value === "ai") {
+					setSettingsTab(value);
+				}
+			}}
 			tabs={[
 				{
 					value: "project-info",
@@ -61,17 +70,6 @@ function ProjectSettingsTabs() {
 					content: (
 						<div className="p-5">
 							<ProjectInfoView />
-						</div>
-					),
-				},
-				{
-					value: "background",
-					label: t("Background"),
-					content: (
-						<div className="flex h-full flex-col justify-between">
-							<div className="flex-1">
-								<BackgroundView />
-							</div>
 						</div>
 					),
 				},
@@ -125,7 +123,30 @@ function ProjectInfoView() {
 	const activeProject = editor.project.getActive();
 
 	const currentCanvasSize = activeProject.settings.canvasSize;
-	const originalCanvasSize = activeProject.settings.originalCanvasSize ?? null;
+	const tracks = editor.timeline.getTracks();
+	const mediaAssets = editor.media.getAssets();
+	const originalCanvasSize = useMemo(() => {
+		if (activeProject.settings.originalCanvasSize?.width && activeProject.settings.originalCanvasSize?.height) {
+			return activeProject.settings.originalCanvasSize;
+		}
+		for (const track of tracks) {
+			if (track.type === "video") {
+				for (const element of track.elements) {
+					if ("mediaId" in element && element.mediaId) {
+						const asset = mediaAssets.find((a) => a.id === element.mediaId);
+						if (asset?.width && asset?.height) {
+							return { width: asset.width, height: asset.height };
+						}
+					}
+				}
+			}
+		}
+		const firstVideo = mediaAssets.find((a) => a.type === "video" && a.width && a.height);
+		if (firstVideo?.width && firstVideo?.height) {
+			return { width: firstVideo.width, height: firstVideo.height };
+		}
+		return null;
+	}, [activeProject.settings.originalCanvasSize, tracks, mediaAssets]);
 
 	const selectedValue = resolveCanvasSizePresetValue({
 		width: currentCanvasSize.width,
@@ -140,7 +161,12 @@ function ProjectInfoView() {
 	const handleCanvasSizeChange = ({ value }: { value: string }) => {
 		if (value === CANVAS_FIT_VALUE) {
 			const canvasSize = originalCanvasSize ?? currentCanvasSize;
-			editor.project.updateSettings({ settings: { canvasSize } });
+			editor.project.updateSettings({
+				settings: {
+					canvasSize,
+					originalCanvasSize: canvasSize,
+				},
+			});
 			return;
 		}
 

@@ -1,6 +1,7 @@
 import type { CanvasRenderer } from "../canvas-renderer";
 import { VisualNode, type VisualNodeParams } from "./visual-node";
 import { videoCache } from "@/services/video-cache/service";
+import { bucketPreviewEdge } from "@/lib/preview/preview-size";
 
 export interface VideoNodeParams extends VisualNodeParams {
 	url: string;
@@ -21,6 +22,10 @@ export class VideoNode extends VisualNode<VideoNodeParams> {
 			mediaId: this.params.mediaId,
 			file: this.params.file,
 			time: videoTime,
+			maxEdge:
+				renderer.quality === "preview"
+					? bucketPreviewEdge(renderer.previewMaxEdge)
+					: undefined,
 		});
 
 		if (frame) {
@@ -28,6 +33,7 @@ export class VideoNode extends VisualNode<VideoNodeParams> {
 				source: frame.canvas,
 				sourceWidth: frame.canvas.width,
 				sourceHeight: frame.canvas.height,
+				renderer,
 			});
 			this.renderVisual({ renderer, ...masked, time });
 		}

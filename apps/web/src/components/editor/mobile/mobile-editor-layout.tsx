@@ -11,6 +11,11 @@ import { MobileTextDrawer } from "./mobile-drawer/mobile-text-drawer";
 import { MobileStickerDrawer } from "./mobile-drawer/mobile-sticker-drawer";
 import { MobileAudioDrawer } from "./mobile-drawer/mobile-audio-drawer";
 import { MobileAIDrawer } from "./mobile-drawer/mobile-ai-drawer";
+import { MobileRecognitionDrawer } from "./mobile-drawer/mobile-recognition-drawer";
+import { MobileTranslationDrawer } from "./mobile-drawer/mobile-translation-drawer";
+import { MobileNarrationDrawer } from "./mobile-drawer/mobile-narration-drawer";
+import { MobileVoiceLibraryDrawer } from "./mobile-drawer/mobile-voice-library-drawer";
+import { MobileSettingsDrawer } from "./mobile-drawer/mobile-settings-drawer";
 import { useCloseDrawerOnInsert } from "./hooks/use-close-drawer-on-insert";
 
 export function MobileEditorLayout() {
@@ -39,6 +44,11 @@ export function MobileEditorLayout() {
 			<MobileStickerDrawer />
 			<MobileAudioDrawer />
 			<MobileAIDrawer />
+			<MobileRecognitionDrawer />
+			<MobileTranslationDrawer />
+			<MobileNarrationDrawer />
+			<MobileVoiceLibraryDrawer />
+			<MobileSettingsDrawer />
 		</div>
 	);
 }

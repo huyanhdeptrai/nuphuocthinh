@@ -34,6 +34,9 @@ export interface AudioTrack extends BaseTrack {
 	type: "audio";
 	elements: AudioElement[];
 	muted: boolean;
+	speakerId?: string;
+	speakerName?: string;
+	color?: string;
 }
 
 export interface StickerTrack extends BaseTrack {
@@ -179,12 +182,32 @@ export interface TrackTransition {
 	toElementId: string;
 }
 
+export type AudioRole = "narration" | "source" | "music-stem" | "ducked-source";
+
 interface BaseAudioElement extends BaseTimelineElement {
 	type: "audio";
 	volume: number;
 	muted?: boolean;
 	buffer?: AudioBuffer;
 	playbackRate?: number;
+	audioRole?: AudioRole;
+	speakerId?: string;
+	speakerName?: string;
+	speakerColor?: string;
+	color?: string;
+	/** Raw extracted WAV id so voice-reduction can revert without re-decoding the movie. */
+	originalMediaId?: string;
+
+	/** Isolated vocal stem so the slider can remix without re-running ML. */
+	vocalsMediaId?: string;
+	/** Isolated music/SFX stem kept when dialogue is reduced. */
+	instrumentalMediaId?: string;
+	/** Model id that produced the cached stems; mismatch forces re-isolation. */
+	vocalIsolationModel?: string;
+	/** Music stem gain (0-1) used when mixing isolated stems. */
+	musicGain?: number;
+	/** Vocal stem gain (0-1) used when mixing isolated stems. */
+	vocalGain?: number;
 }
 
 export interface UploadAudioElement extends BaseAudioElement {
@@ -212,6 +235,7 @@ export interface VideoElement extends BaseTimelineElement {
 	type: "video";
 	mediaId: string;
 	muted?: boolean;
+	volume?: number;
 	hidden?: boolean;
 	transform: Transform;
 	opacity: number;
@@ -342,7 +366,18 @@ export interface TextElement extends BaseTimelineElement {
 	backgroundOpacity?: number;
 	backgroundPaddingX?: number;
 	backgroundPaddingY?: number;
+	backgroundWidthMode?: "auto" | "full";
+	backgroundWidthRatio?: number;
 	textAnimations?: TextAnimations;
+	speakerId?: string;
+	speakerName?: string;
+	speakerColor?: string;
+	timelineColor?: string;
+	subtitleSpeaker?: {
+		id: string;
+		name: string;
+		color: string;
+	};
 }
 
 export interface StickerElement extends BaseTimelineElement {
@@ -355,20 +390,65 @@ export interface StickerElement extends BaseTimelineElement {
 	keyframes?: ElementKeyframes;
 }
 
+export type OverlayEffectMode =
+	| "pixelate"
+	| "blur"
+	| "blur-strip"
+	| "frosted-glass"
+	| "remove-logo"
+	| "remove-subtitle";
+
 export interface BlurEffectElement extends BaseTimelineElement {
 	type: "blur-effect";
+	effectMode?: OverlayEffectMode;
 	/** Blur strength, 0–100. */
 	blurIntensity: number;
+	/** Pixelate block size (e.g. 4–64, default 16). */
+	pixelSize?: number;
+	/** Edge softness / feather (0–1, default 0.5). */
+	feather?: number;
 	/** Width as a fraction of canvas (1 = full width). */
 	boxWidth?: number;
 	/** Height as a fraction of canvas (1 = full height). */
 	boxHeight?: number;
+	/** Darken overlay tint on the blur strip (0–100). */
+	darkenOverlay?: number;
+	/** Corner border radius in pixels (0–100). */
+	borderRadius?: number;
+	/** Frosted Glass: grain/noise intensity (0–100, default 30). */
+	grainIntensity?: number;
+	/** Kính mờ: extra padding around the masked area in pixels (0–80). */
+	borderPadding?: number;
+	/** Legacy Remove Subtitle: expand the region upward by px (0–200). */
+	expandTop?: number;
+	/** Remove Subtitle: expand the region downward by px (0–200). */
+	expandBottom?: number;
+	/** Remove Subtitle: expand the region left by px (0–200). */
+	expandLeft?: number;
+	/** Remove Subtitle: expand the region right by px (0–200). */
+	expandRight?: number;
+	/** Sync with subtitle cue timings. */
+	syncWithSubtitles?: boolean;
+	/** Which subtitle data source drives a synchronized overlay. */
+	subtitleSyncSource?: "timeline-subtitles" | "original-subtitles";
+	subtitlePaddingStart?: number;
+	subtitlePaddingEnd?: number;
+	/** Extra coverage around a subtitle-synced effect, in rendered canvas pixels. */
+	subtitleExpandX?: number;
+	subtitleExpandY?: number;
+	/** Internal group metadata for materialized subtitle-synced effect elements. */
+	syncGroupId?: string;
+	syncGenerated?: boolean;
+	syncOriginal?: {
+		startTime: number;
+		duration: number;
+		transform: Transform;
+	};
 	hidden?: boolean;
 	transform: Transform;
 	opacity: number;
 	keyframes?: ElementKeyframes;
 }
-
 
 export type TimelineElement =
 	| AudioElement

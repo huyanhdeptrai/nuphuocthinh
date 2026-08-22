@@ -2,20 +2,29 @@ import { useRef } from "react";
 import { useTranslation } from "@i18next-toolkit/nextjs-approuter";
 import { usePreviewInteraction } from "@/hooks/use-preview-interaction";
 import { useChromaPickerStore } from "@/stores/chroma-picker-store";
+import { useDubbingStore } from "@/dubbing/dubbing-store";
 import { cn } from "@/utils/ui";
 import { SelectionOverlay } from "./selection-overlay";
 import { GuideLines } from "./guide-lines";
+import { OcrRegionOverlay } from "./ocr-region-overlay";
 
 export function PreviewInteractionOverlay({
 	canvasRef,
 	displaySize,
+	canvasWidth,
+	canvasHeight,
 }: {
 	canvasRef: React.RefObject<HTMLCanvasElement | null>;
 	displaySize: { width: number; height: number };
+	canvasWidth: number;
+	canvasHeight: number;
 }) {
 	const overlayRef = useRef<HTMLDivElement>(null);
 	const { t } = useTranslation();
 	const isPickingChroma = useChromaPickerStore((state) => state.isPicking);
+	const isSelectingOcrRegion = useDubbingStore(
+		(state) => state.isSelectingOcrRegion,
+	);
 	const {
 		onPointerDown,
 		onPointerMove,
@@ -28,9 +37,6 @@ export function PreviewInteractionOverlay({
 		chromaPreview,
 	} = usePreviewInteraction({ canvasRef, overlayRef });
 
-	const canvasWidth = canvasRef.current?.width ?? 0;
-	const canvasHeight = canvasRef.current?.height ?? 0;
-
 	return (
 		<div
 			ref={overlayRef}
@@ -38,9 +44,9 @@ export function PreviewInteractionOverlay({
 				"pointer-events-auto absolute inset-0",
 				isPickingChroma && "cursor-crosshair",
 			)}
-			onPointerDown={onPointerDown}
-			onPointerMove={onPointerMove}
-			onPointerUp={onPointerUp}
+			onPointerDown={isSelectingOcrRegion ? undefined : onPointerDown}
+			onPointerMove={isSelectingOcrRegion ? undefined : onPointerMove}
+			onPointerUp={isSelectingOcrRegion ? undefined : onPointerUp}
 			onPointerLeave={clearChromaPreview}
 		>
 			{isPickingChroma && chromaPreview && (
@@ -66,7 +72,7 @@ export function PreviewInteractionOverlay({
 				canvasWidth={canvasWidth}
 				canvasHeight={canvasHeight}
 			/>
-			{!isPickingChroma && (
+			{!isPickingChroma && !isSelectingOcrRegion && (
 				<SelectionOverlay
 					displaySize={displaySize}
 					onScaleStart={onScaleStart}
@@ -74,6 +80,7 @@ export function PreviewInteractionOverlay({
 					isTransforming={isTransforming}
 				/>
 			)}
+			<OcrRegionOverlay displaySize={displaySize} />
 		</div>
 	);
 }

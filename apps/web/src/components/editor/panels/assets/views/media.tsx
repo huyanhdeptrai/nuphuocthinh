@@ -209,7 +209,29 @@ export function MediaView() {
 	};
 
 	const filteredMediaItems = useMemo(() => {
-		const filtered = mediaFiles.filter((item) => !item.ephemeral);
+		const filtered = mediaFiles.filter((item) => {
+			if (item.ephemeral) return false;
+			const lower = item.name.toLowerCase();
+			if (
+				lower.startsWith("nguon-video") ||
+				lower.startsWith("nhac-nen") ||
+				lower.startsWith("ha-am") ||
+				lower.startsWith("thuyet-minh") ||
+				lower.startsWith("tts") ||
+				lower.startsWith("vocal") ||
+				lower.startsWith("isolated") ||
+				lower.startsWith("stem") ||
+				item.name.startsWith("[Nguồn video:") ||
+				item.name.startsWith("[Nhạc nền video:") ||
+				item.name.startsWith("[Hạ âm video:") ||
+				item.name.startsWith("[Thuyết minh:") ||
+				item.name.startsWith("Thuyết minh:") ||
+				item.name.startsWith("TTS:")
+			) {
+				return false;
+			}
+			return true;
+		});
 
 		filtered.sort((a, b) => {
 			let valueA: string | number;

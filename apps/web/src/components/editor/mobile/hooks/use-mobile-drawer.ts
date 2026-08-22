@@ -8,6 +8,11 @@ type MobileDrawerType =
 	| "sticker"
 	| "audio"
 	| "ai"
+	| "recognition"
+	| "translation"
+	| "voice-library"
+	| "narration"
+	| "settings"
 	| "properties"
 	| null;
 

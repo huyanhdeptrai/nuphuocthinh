@@ -1,6 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-import { webEnv } from "@editkub/env/web";
+import { webEnv } from "@lemyloi-dichvideo/env/web";
 
 // ponytail: Redis optional — core editor works without backend services
 const redisUrl = webEnv.UPSTASH_REDIS_REST_URL;

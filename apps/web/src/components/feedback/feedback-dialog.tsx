@@ -96,7 +96,7 @@ export function FeedbackDialog({
 						<DialogTitle>{t("Share your feedback")}</DialogTitle>
 						<DialogDescription>
 							{t(
-								"Help us improve Editkub — let us know what's working, what's not, or what you'd like to see.",
+								"Help us improve Lemyloi-dichvideo — let us know what's working, what's not, or what you'd like to see.",
 							)}
 						</DialogDescription>
 					</DialogHeader>

@@ -1,0 +1,6 @@
+# Dedicated .venv-spleeter (Python 3.11 only).
+# Do not install into .venv-diarization, VieNeu, or the old UVR .venv (3.13).
+# Official spleeter==2.4.2 has no tensorflow-io wheel for Windows 3.11.
+spleeter-thomasesr==3.0.0a1
+soundfile>=0.12.1
+soxr>=0.3.7

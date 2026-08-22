@@ -13,12 +13,10 @@ import { ImageNode } from "./nodes/image-node";
 import { TextNode } from "./nodes/text-node";
 import { StickerNode } from "./nodes/sticker-node";
 import { ColorNode } from "./nodes/color-node";
-import { BlurBackgroundNode } from "./nodes/blur-background-node";
 import { BlurEffectNode } from "./nodes/blur-effect-node";
 import { TransitionNode } from "./nodes/transition-node";
 import type { BaseNode } from "./nodes/base-node";
 import type { TBackground, TCanvasSize } from "@/types/project";
-import { DEFAULT_BLUR_INTENSITY } from "@/constants/project-constants";
 import { isBottomAlignedSubtitleText } from "@/lib/timeline/text-utils";
 import { FILTER_PRESETS } from "@/constants/filter-constants";
 
@@ -33,9 +31,13 @@ export type BuildSceneParams = {
 function buildVisualElementNode({
 	element,
 	mediaMap,
+	isBackgroundCover,
+	blurRadius,
 }: {
 	element: VideoElement | ImageElement;
 	mediaMap: Map<string, MediaAsset>;
+	isBackgroundCover?: boolean;
+	blurRadius?: number;
 }): BaseNode | null {
 	const mediaAsset = mediaMap.get(element.mediaId);
 	if (!mediaAsset?.file || !mediaAsset?.url) {
@@ -63,6 +65,8 @@ function buildVisualElementNode({
 			keyframes: element.keyframes,
 			playbackRate: videoElement.playbackRate,
 			reversed: videoElement.reversed,
+			isBackgroundCover,
+			blurRadius,
 		});
 	}
 
@@ -82,6 +86,8 @@ function buildVisualElementNode({
 			videoEffect: element.videoEffect,
 			shapeMask: element.shapeMask,
 			keyframes: element.keyframes,
+			isBackgroundCover,
+			blurRadius,
 		});
 	}
 
@@ -113,8 +119,57 @@ export function buildScene(params: BuildSceneParams) {
 	// no visible effect on the canvas.
 	const orderedTracksBottomToTop = visibleTracks.slice().reverse();
 
-	const contentNodes: BaseNode[] = [];
+	// Project backgrounds are always composited below timeline content. Solid and
+	// gradient backgrounds naturally show only through uncovered canvas areas.
+	if (background.type === "gradient") {
+		rootNode.add(new ColorNode({ color: background.css }));
+	} else if (
+		background.type === "color" &&
+		background.color !== "transparent"
+	) {
+		rootNode.add(new ColorNode({ color: background.color }));
+	} else if (background.type === "blur") {
+		// Duplicate only the main video track as a cover layer. This keeps text,
+		// stickers and overlay effects out of the blurred side/top bars. Older or
+		// imported projects can have a usable video track without the isMain flag;
+		// in that case use the first visible video track instead of exporting black.
+		const mainVideoTracks = orderedTracksBottomToTop.filter(
+			(track): track is VideoTrack => track.type === "video" && track.isMain,
+		);
+		const fallbackVideoTrack = orderedTracksBottomToTop.find(
+			(track): track is VideoTrack =>
+				track.type === "video" &&
+				track.elements.some((element) => !element.hidden),
+		);
+		const backgroundVideoTracks =
+			mainVideoTracks.length > 0
+				? mainVideoTracks
+				: fallbackVideoTrack
+					? [fallbackVideoTrack]
+					: [];
 
+		for (const track of backgroundVideoTracks) {
+			const elements = track.elements
+				.filter((element) => !element.hidden)
+				.slice()
+				.sort((a, b) => {
+					if (a.startTime !== b.startTime) return a.startTime - b.startTime;
+					return a.id.localeCompare(b.id);
+				});
+
+			for (const element of elements) {
+				const backgroundNode = buildVisualElementNode({
+					element,
+					mediaMap,
+					isBackgroundCover: true,
+					blurRadius: background.blurIntensity,
+				});
+				if (backgroundNode) rootNode.add(backgroundNode);
+			}
+		}
+	}
+
+	const contentNodes: BaseNode[] = [];
 	for (const track of orderedTracksBottomToTop) {
 		const elements = track.elements
 			.filter((element) => !("hidden" in element && element.hidden))
@@ -228,44 +283,39 @@ export function buildScene(params: BuildSceneParams) {
 			if (element.type === "blur-effect") {
 				contentNodes.push(
 					new BlurEffectNode({
-						blurIntensity: element.blurIntensity,
-						boxWidth: element.boxWidth,
-						boxHeight: element.boxHeight,
+							effectMode: element.effectMode,
+							blurIntensity: element.blurIntensity,
+							pixelSize: element.pixelSize,
+							feather: element.feather,
+							boxWidth: element.boxWidth,
+							boxHeight: element.boxHeight,
+							darkenOverlay: element.darkenOverlay,
+							borderRadius: element.borderRadius,
+							grainIntensity: element.grainIntensity,
+							borderPadding: element.borderPadding,
+							expandTop: element.expandTop,
+							expandBottom: element.expandBottom,
+							expandLeft: element.expandLeft,
+							expandRight: element.expandRight,
+							syncWithSubtitles: element.syncWithSubtitles,
+							subtitlePaddingStart: element.subtitlePaddingStart,
+							subtitlePaddingEnd: element.subtitlePaddingEnd,
 						duration: element.duration,
 						timeOffset: element.startTime,
-						trimStart: element.trimStart,
-						trimEnd: element.trimEnd,
-						transform: element.transform,
-						opacity: element.opacity,
-						keyframes: element.keyframes,
+							trimStart: element.trimStart,
+							trimEnd: element.trimEnd,
+							transform: element.transform,
+							opacity: element.opacity,
+							keyframes: element.keyframes,
 					}),
 				);
 			}
+
 		}
 	}
 
-	if (background.type === "blur") {
-		rootNode.add(
-			new BlurBackgroundNode({
-				blurIntensity: background.blurIntensity ?? DEFAULT_BLUR_INTENSITY,
-				contentNodes,
-			}),
-		);
-		for (const node of contentNodes) {
-			rootNode.add(node);
-		}
-	} else if (background.type === "gradient") {
-		rootNode.add(new ColorNode({ color: background.css }));
-		for (const node of contentNodes) {
-			rootNode.add(node);
-		}
-	} else {
-		if (background.type === "color" && background.color !== "transparent") {
-			rootNode.add(new ColorNode({ color: background.color }));
-		}
-		for (const node of contentNodes) {
-			rootNode.add(node);
-		}
+	for (const node of contentNodes) {
+		rootNode.add(node);
 	}
 
 	return rootNode;

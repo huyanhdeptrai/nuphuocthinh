@@ -17,6 +17,7 @@ export interface ResizeState {
 	initialStartTime: number;
 	initialDuration: number;
 	initialPlaybackRate: number;
+	mode: "trim" | "speed";
 }
 
 interface UseTimelineElementResizeProps {
@@ -25,6 +26,7 @@ interface UseTimelineElementResizeProps {
 	zoomLevel: number;
 	onSnapPointChange?: (snapPoint: SnapPoint | null) => void;
 	onResizeStateChange?: (params: { isResizing: boolean }) => void;
+	resizeMode?: "trim" | "speed";
 }
 
 export function useTimelineElementResize({
@@ -33,6 +35,7 @@ export function useTimelineElementResize({
 	zoomLevel,
 	onSnapPointChange,
 	onResizeStateChange,
+	resizeMode = "trim",
 }: UseTimelineElementResizeProps) {
 	const editor = EditorCore.getInstance();
 	const activeProject = editor.project.getActive();
@@ -44,10 +47,17 @@ export function useTimelineElementResize({
 	const [currentTrimEnd, setCurrentTrimEnd] = useState(element.trimEnd);
 	const [currentStartTime, setCurrentStartTime] = useState(element.startTime);
 	const [currentDuration, setCurrentDuration] = useState(element.duration);
+	const [currentPlaybackRate, setCurrentPlaybackRate] = useState(
+		(element.type === "video" || element.type === "audio") &&
+			"playbackRate" in element
+			? (element.playbackRate ?? 1)
+			: 1,
+	);
 	const currentTrimStartRef = useRef(element.trimStart);
 	const currentTrimEndRef = useRef(element.trimEnd);
 	const currentStartTimeRef = useRef(element.startTime);
 	const currentDurationRef = useRef(element.duration);
+	const currentPlaybackRateRef = useRef(currentPlaybackRate);
 
 	const handleResizeStart = ({
 		e,
@@ -76,6 +86,7 @@ export function useTimelineElementResize({
 			initialStartTime: element.startTime,
 			initialDuration: element.duration,
 			initialPlaybackRate: rate,
+			mode: resizeMode,
 		});
 
 		setCurrentTrimStart(element.trimStart);
@@ -86,6 +97,8 @@ export function useTimelineElementResize({
 		currentTrimEndRef.current = element.trimEnd;
 		currentStartTimeRef.current = element.startTime;
 		currentDurationRef.current = element.duration;
+		setCurrentPlaybackRate(rate);
+		currentPlaybackRateRef.current = rate;
 		onResizeStateChange?.({ isResizing: true });
 	};
 
@@ -149,6 +162,37 @@ export function useTimelineElementResize({
 			onSnapPointChange?.(resizeSnapPoint);
 
 			if (resizing.side === "left") {
+				if (resizing.mode === "speed") {
+					const sourcePlayableDuration =
+						resizing.initialDuration * resizing.initialPlaybackRate;
+					const desiredDuration = Math.max(
+						minDurationSeconds,
+						resizing.initialDuration - deltaTime,
+					);
+					const nextRate = Math.min(
+						4,
+						Math.max(0.25, sourcePlayableDuration / desiredDuration),
+					);
+					const nextDuration = snapTimeToFrame({
+						time: sourcePlayableDuration / nextRate,
+						fps: projectFps,
+					});
+					const nextStartTime = snapTimeToFrame({
+						time: Math.max(
+							0,
+							resizing.initialStartTime + resizing.initialDuration - nextDuration,
+						),
+						fps: projectFps,
+					});
+
+					setCurrentStartTime(nextStartTime);
+					setCurrentDuration(nextDuration);
+					setCurrentPlaybackRate(nextRate);
+					currentStartTimeRef.current = nextStartTime;
+					currentDurationRef.current = nextDuration;
+					currentPlaybackRateRef.current = nextRate;
+					return;
+				}
 				const rate = resizing.initialPlaybackRate;
 				const sourceDuration =
 					resizing.initialTrimStart +
@@ -221,6 +265,28 @@ export function useTimelineElementResize({
 					}
 				}
 			} else {
+				if (resizing.mode === "speed") {
+					const sourcePlayableDuration =
+						resizing.initialDuration * resizing.initialPlaybackRate;
+					const desiredDuration = Math.max(
+						minDurationSeconds,
+						resizing.initialDuration + deltaTime,
+					);
+					const nextRate = Math.min(
+						4,
+						Math.max(0.25, sourcePlayableDuration / desiredDuration),
+					);
+					const nextDuration = snapTimeToFrame({
+						time: sourcePlayableDuration / nextRate,
+						fps: projectFps,
+					});
+
+					setCurrentDuration(nextDuration);
+					setCurrentPlaybackRate(nextRate);
+					currentDurationRef.current = nextDuration;
+					currentPlaybackRateRef.current = nextRate;
+					return;
+				}
 				const rate = resizing.initialPlaybackRate;
 				const sourceDuration =
 					resizing.initialTrimStart +
@@ -297,12 +363,31 @@ export function useTimelineElementResize({
 		const finalTrimEnd = currentTrimEndRef.current;
 		const finalStartTime = currentStartTimeRef.current;
 		const finalDuration = currentDurationRef.current;
+		const finalPlaybackRate = currentPlaybackRateRef.current;
 		const trimStartChanged = finalTrimStart !== resizing.initialTrimStart;
 		const trimEndChanged = finalTrimEnd !== resizing.initialTrimEnd;
 		const startTimeChanged = finalStartTime !== resizing.initialStartTime;
 		const durationChanged = finalDuration !== resizing.initialDuration;
 
-		if (trimStartChanged || trimEndChanged) {
+		if (resizing.mode === "speed") {
+			const playbackRateChanged =
+				Math.abs(finalPlaybackRate - resizing.initialPlaybackRate) > 0.0001;
+			if (startTimeChanged || durationChanged || playbackRateChanged) {
+				editor.timeline.updateElements({
+					updates: [
+						{
+							trackId: track.id,
+							elementId: element.id,
+							updates: {
+								startTime: finalStartTime,
+								duration: finalDuration,
+								playbackRate: finalPlaybackRate,
+							},
+						},
+					],
+				});
+			}
+		} else if (trimStartChanged || trimEndChanged) {
 			editor.timeline.updateElementTrim({
 				elementId: element.id,
 				trimStart: finalTrimStart,
@@ -365,5 +450,6 @@ export function useTimelineElementResize({
 		currentTrimEnd,
 		currentStartTime,
 		currentDuration,
+		currentPlaybackRate,
 	};
 }

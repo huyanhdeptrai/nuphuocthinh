@@ -39,7 +39,6 @@ export function useTimelineDragDrop({
 	const [dragElementType, setElementType] = useState<ElementType | null>(null);
 
 	const tracks = editor.timeline.getTracks();
-	const currentTime = editor.playback.getCurrentTime();
 	const mediaAssets = editor.media.getAssets();
 	const activeProject = editor.project.getActive();
 
@@ -138,7 +137,7 @@ export function useTimelineDragDrop({
 				mouseX,
 				mouseY,
 				tracks,
-				playheadTime: currentTime,
+						playheadTime: editor.playback.getCurrentTime(),
 				isExternalDrop: isExternal,
 				elementDuration: duration,
 				pixelsPerSecond: TIMELINE_CONSTANTS.PIXELS_PER_SECOND,
@@ -155,7 +154,7 @@ export function useTimelineDragDrop({
 			containerRef,
 			headerRef,
 			tracks,
-			currentTime,
+			editor.playback,
 			zoomLevel,
 			getElementType,
 			getElementDuration,
@@ -385,7 +384,7 @@ export function useTimelineDragDrop({
 						mouseX,
 						mouseY,
 						tracks: currentTracks,
-						playheadTime: currentTime,
+				playheadTime: editor.playback.getCurrentTime(),
 						isExternalDrop: true,
 						elementDuration: duration,
 						pixelsPerSecond: TIMELINE_CONSTANTS.PIXELS_PER_SECOND,
@@ -439,7 +438,7 @@ export function useTimelineDragDrop({
 				}
 			}
 		},
-		[activeProject, editor.media, editor.timeline, currentTime, zoomLevel],
+		[activeProject, editor.media, editor.timeline, editor.playback, zoomLevel],
 	);
 
 	const handleDrop = useCallback(

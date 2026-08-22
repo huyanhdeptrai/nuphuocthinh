@@ -34,6 +34,8 @@ export interface VisualNodeParams {
 	keyframes?: ElementKeyframes;
 	playbackRate?: number;
 	reversed?: boolean;
+	isBackgroundCover?: boolean;
+	blurRadius?: number;
 }
 
 export abstract class VisualNode<
@@ -43,35 +45,76 @@ export abstract class VisualNode<
 	private vfxTarget?: DrawableCanvas;
 	private shapeMaskTarget?: DrawableCanvas;
 
+	private previewSourceTarget?: DrawableCanvas;
+
+	shouldRender(time: number): boolean {
+		return this.isInRange(time);
+	}
+
 	protected getMaskedSource({
 		source,
 		sourceWidth,
 		sourceHeight,
+		renderer,
 	}: {
 		source: CanvasImageSource;
 		sourceWidth: number;
 		sourceHeight: number;
+		renderer: CanvasRenderer;
 	}): {
 		source: CanvasImageSource;
 		sourceWidth: number;
 		sourceHeight: number;
 	} {
 		let currentSource: CanvasImageSource = source;
+		let currentWidth = sourceWidth;
+		let currentHeight = sourceHeight;
+
+		if (renderer.quality === "preview") {
+			const longEdge = Math.max(sourceWidth, sourceHeight);
+			if (longEdge > renderer.previewMaxEdge) {
+				const scale = renderer.previewMaxEdge / longEdge;
+				currentWidth = Math.max(1, Math.round(sourceWidth * scale));
+				currentHeight = Math.max(1, Math.round(sourceHeight * scale));
+				this.previewSourceTarget = ensureChromaTarget({
+					existing: this.previewSourceTarget,
+					width: currentWidth,
+					height: currentHeight,
+				});
+				const previewCtx = this.previewSourceTarget.getContext("2d") as
+					| CanvasRenderingContext2D
+					| OffscreenCanvasRenderingContext2D
+					| null;
+				if (previewCtx) {
+					previewCtx.drawImage(source, 0, 0, currentWidth, currentHeight);
+					currentSource = this.previewSourceTarget;
+				} else {
+					currentWidth = sourceWidth;
+					currentHeight = sourceHeight;
+				}
+			}
+		}
+
+		const effectScale = renderer.quality === "preview" ? 0.5 : 1;
+		const effectWidth = Math.max(1, Math.round(currentWidth * effectScale));
+		const effectHeight = Math.max(1, Math.round(currentHeight * effectScale));
 
 		if (this.params.chromaKey) {
 			this.chromaTarget = ensureChromaTarget({
 				existing: this.chromaTarget,
-				width: sourceWidth,
-				height: sourceHeight,
+				width: effectWidth,
+				height: effectHeight,
 			});
 			applyChromaKey({
 				source: currentSource,
-				sourceWidth,
-				sourceHeight,
+				sourceWidth: effectWidth,
+				sourceHeight: effectHeight,
 				config: this.params.chromaKey,
 				target: this.chromaTarget,
 			});
 			currentSource = this.chromaTarget;
+			currentWidth = effectWidth;
+			currentHeight = effectHeight;
 		}
 
 		if (
@@ -81,36 +124,42 @@ export abstract class VisualNode<
 		) {
 			this.vfxTarget = ensureChromaTarget({
 				existing: this.vfxTarget,
-				width: sourceWidth,
-				height: sourceHeight,
+				width: effectWidth,
+				height: effectHeight,
 			});
 			applyVideoEffect({
 				source: currentSource,
-				sourceWidth,
-				sourceHeight,
+				sourceWidth: effectWidth,
+				sourceHeight: effectHeight,
 				config: this.params.videoEffect,
 				target: this.vfxTarget,
 			});
 			currentSource = this.vfxTarget;
+			currentWidth = effectWidth;
+			currentHeight = effectHeight;
 		}
 
 		if (this.params.shapeMask) {
 			this.shapeMaskTarget = ensureChromaTarget({
 				existing: this.shapeMaskTarget,
-				width: sourceWidth,
-				height: sourceHeight,
+				width: currentWidth,
+				height: currentHeight,
 			});
 			applyShapeMask({
 				source: currentSource,
-				sourceWidth,
-				sourceHeight,
+				sourceWidth: currentWidth,
+				sourceHeight: currentHeight,
 				config: this.params.shapeMask,
 				target: this.shapeMaskTarget,
 			});
 			currentSource = this.shapeMaskTarget;
 		}
 
-		return { source: currentSource, sourceWidth, sourceHeight };
+		return {
+			source: currentSource,
+			sourceWidth: currentWidth,
+			sourceHeight: currentHeight,
+		};
 	}
 
 	protected getLocalTime(time: number): number {
@@ -145,6 +194,35 @@ export abstract class VisualNode<
 		time: number;
 	}): void {
 		renderer.context.save();
+
+		if (this.params.isBackgroundCover) {
+			const coverScale =
+				Math.max(
+					renderer.width / sourceWidth,
+					renderer.height / sourceHeight,
+				) * 1.15;
+			const scaledWidth = sourceWidth * coverScale;
+			const scaledHeight = sourceHeight * coverScale;
+			const x = (renderer.width - scaledWidth) / 2;
+			const y = (renderer.height - scaledHeight) / 2;
+
+			renderer.context.globalAlpha = 1;
+
+			// Always paint an opaque cover frame first. A filtered draw can leave
+			// transparent pixels around the enlarged image (and some export canvas
+			// implementations may fail to preserve that filtered pass), which H.264
+			// turns into black bars. The blurred pass below still supplies the visible
+			// background while this base pass guarantees that the frame is filled.
+			renderer.context.filter = "none";
+			renderer.context.drawImage(source, x, y, scaledWidth, scaledHeight);
+
+			if (this.params.blurRadius && this.params.blurRadius > 0) {
+				renderer.context.filter = `blur(${this.params.blurRadius.toFixed(1)}px)`;
+				renderer.context.drawImage(source, x, y, scaledWidth, scaledHeight);
+			}
+			renderer.context.restore();
+			return;
+		}
 
 		if (this.params.blendMode) {
 			renderer.context.globalCompositeOperation =

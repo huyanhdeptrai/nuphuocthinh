@@ -3,16 +3,28 @@
 import { useTranslation } from "@i18next-toolkit/nextjs-approuter";
 import {
 	AiBrain01Icon,
+	ClosedCaptionIcon,
 	Folder03Icon,
 	Happy01Icon,
 	HeadphonesIcon,
 	TextIcon,
+	TranslateIcon,
+	VoiceIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { cn } from "@/utils/ui";
 import { useMobileDrawerStore } from "./hooks/use-mobile-drawer";
 
-type TabKey = "assets" | "text" | "sticker" | "audio" | "ai";
+type TabKey =
+	| "assets"
+	| "text"
+	| "sticker"
+	| "audio"
+	| "ai"
+	| "recognition"
+	| "translation"
+	| "voice-library"
+	| "narration";
 
 interface TabConfig {
 	key: TabKey;
@@ -26,6 +38,10 @@ const TABS: TabConfig[] = [
 	{ key: "sticker", icon: Happy01Icon, labelKey: "Stickers" },
 	{ key: "audio", icon: HeadphonesIcon, labelKey: "Audio" },
 	{ key: "ai", icon: AiBrain01Icon, labelKey: "AI" },
+	{ key: "recognition", icon: ClosedCaptionIcon, labelKey: "Nhận Dạng Videos" },
+	{ key: "translation", icon: TranslateIcon, labelKey: "Dịch Thuật AI" },
+	{ key: "voice-library", icon: VoiceIcon, labelKey: "Kho Mẫu Giọng" },
+	{ key: "narration", icon: HeadphonesIcon, labelKey: "Thuyết minh" },
 ];
 
 export function MobileToolbar() {
