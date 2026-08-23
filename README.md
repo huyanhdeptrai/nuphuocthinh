@@ -17,6 +17,8 @@ Lemyloi-dichvideos lấy mã nguồn từ [Editkub](https://github.com/9teeedev/
 - Dịch phụ đề, đồng bộ vị trí phụ đề/lớp phủ theo subtitle gốc.
 - Thuyết minh/TTS, quản lý giọng nói, tách lời và cân chỉnh âm thanh.
 - Chỉnh sửa timeline, lớp phủ, hiệu ứng làm mờ để che subtitle gốc.
+- Xuất/Nhập dự án `.ldvproj`: mang theo timeline, cài đặt và toàn bộ media gốc để mở trên máy khác.
+- Runtime CUDA/TTS tự dọn các file tải tạm sau khi cài thành công để không chiếm dung lượng vô ích.
 
 Đây là mã nguồn mở để bạn có thể **vibe code**: tự tạo ngôn ngữ phù hợp với mình, điều chỉnh giao diện/quy trình làm việc, hoặc bổ sung bất kỳ chức năng nào cần cho dự án video.
 

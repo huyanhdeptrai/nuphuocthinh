@@ -3,8 +3,8 @@
 import { useTranslation } from "@i18next-toolkit/nextjs-approuter";
 import Image from "next/image";
 import { Link, useRouter } from "@/lib/navigation";
-import type { KeyboardEvent, MouseEvent } from "react";
-import { useEffect, useState } from "react";
+import type { ChangeEvent, KeyboardEvent, MouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { MigrationDialog } from "@/components/editor/dialogs/migration-dialog";
 import { Button } from "@/components/ui/button";
@@ -131,6 +131,24 @@ export default function ProjectsPage() {
 function ProjectsHeader() {
 	const { t } = useTranslation();
 	const { viewMode, isHydrated, setViewMode } = useProjectsStore();
+	const editor = useEditor();
+	const router = useRouter();
+	const importInputRef = useRef<HTMLInputElement>(null);
+
+	const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+		if (!file) return;
+		try {
+			const projectId = await editor.project.importPortableProject({ file });
+			toast.success("Đã nhập dự án kèm toàn bộ media.");
+			router.push(`/editor/${projectId}`);
+		} catch (error) {
+			toast.error("Không thể nhập dự án", {
+				description: error instanceof Error ? error.message : "Vui lòng thử lại.",
+			});
+		}
+	};
 
 	return (
 		<header className="sticky top-0 z-20 px-8 bg-background flex flex-col gap-2">
@@ -177,6 +195,21 @@ function ProjectsHeader() {
 				<div className="flex items-center gap-3 md:gap-4">
 					<StorageIndicator />
 					<SearchBar className="hidden md:block" />
+					<input
+						ref={importInputRef}
+						type="file"
+						accept=".ldvproj,application/vnd.lemyloi-dichvideo.project+zip"
+						className="hidden"
+						onChange={handleImport}
+					/>
+					<Button
+						variant="outline"
+						type="button"
+						className="hidden sm:flex"
+						onClick={() => importInputRef.current?.click()}
+					>
+						Nhập dự án
+					</Button>
 					<Link href="/characters">
 						<Button variant="outline" type="button" className="gap-1.5">
 							<HugeiconsIcon icon={UserIcon} className="size-4" />
@@ -395,6 +428,22 @@ async function renameProject({
 	name: string;
 }) {
 	await editor.project.renameProject({ id, name });
+}
+
+async function downloadPortableProject({
+	editor,
+	id,
+}: {
+	editor: ReturnType<typeof useEditor>;
+	id: string;
+}) {
+	const { blob, filename } = await editor.project.exportPortableProject({ id });
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = filename;
+	link.click();
+	URL.revokeObjectURL(url);
 }
 
 function ProjectActions() {
@@ -767,6 +816,19 @@ function ProjectMenu({
 		onOpenChange(false);
 	};
 
+	const handleExportPortable = async () => {
+		try {
+			await downloadPortableProject({ editor, id: project.id });
+			toast.success("Đã xuất gói dự án .ldvproj kèm toàn bộ media.");
+		} catch (error) {
+			toast.error("Không thể xuất dự án", {
+				description: error instanceof Error ? error.message : "Vui lòng thử lại.",
+			});
+		} finally {
+			onOpenChange(false);
+		}
+	};
+
 	const handleDeleteClick = () => {
 		setIsDeleteDialogOpen(true);
 		onOpenChange(false);
@@ -825,6 +887,10 @@ function ProjectMenu({
 					<DropdownMenuItem onClick={handleDuplicate}>
 						<HugeiconsIcon icon={Copy01Icon} />
 						{t("Duplicate")}
+					</DropdownMenuItem>
+					<DropdownMenuItem onClick={handleExportPortable}>
+						<HugeiconsIcon icon={ArrowDown02Icon} />
+						Xuất dự án (.ldvproj)
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={handleInfoClick}>
 						<HugeiconsIcon icon={InformationCircleIcon} />

@@ -67,6 +67,32 @@ function logDesktop(message) {
 	fs.appendFileSync(logPath, `${new Date().toISOString()} ${message}\n`);
 }
 
+function cleanupCompletedComponentDownloads() {
+	const components = path.join(localAppDataPath(), "components");
+	const runtimes = ["runtime-ml-cuda", "tts-vieneu", "tts-supertonic", "tts-omnivoice"];
+	for (const runtime of runtimes) {
+		const root = path.join(components, runtime);
+		const markerPath = path.join(root, "current.json");
+		try {
+			const marker = JSON.parse(fs.readFileSync(markerPath, "utf8"));
+			if (typeof marker.version !== "string" || !/^[a-zA-Z0-9._-]+$/u.test(marker.version)) continue;
+			const downloadDir = path.join(root, "downloads", marker.version);
+			if (fs.existsSync(downloadDir)) {
+				fs.rmSync(downloadDir, { recursive: true, force: true });
+				logDesktop(`Removed completed ${runtime} download artifacts for ${marker.version}.`);
+			}
+			const downloadsRoot = path.dirname(downloadDir);
+			if (fs.existsSync(downloadsRoot) && fs.readdirSync(downloadsRoot).length === 0) {
+				fs.rmdirSync(downloadsRoot);
+			}
+		} catch (error) {
+			if (error && error.code !== "ENOENT") {
+				logDesktop(`Could not clean ${runtime} download artifacts: ${error.message}`);
+			}
+		}
+	}
+}
+
 function assertPortAvailable(port) {
 	return new Promise((resolve, reject) => {
 		const probe = net.createServer();
@@ -121,6 +147,7 @@ async function startProductionServer() {
 	const serverScript = findServerScript();
 	const userData = localAppDataPath();
 	fs.mkdirSync(userData, { recursive: true });
+	cleanupCompletedComponentDownloads();
 	migrateLatestLegacyProjectStore();
 	nextServer = utilityProcess.fork(serverScript, [], {
 		env: {

@@ -8,6 +8,7 @@ import { applyCudaOverlay } from "./cuda-overlay";
 import { concatFiles } from "./file-concat";
 import { gpuManifestUrl } from "./gpu-manifest-url";
 import { componentsRoot as resolveComponentsRoot } from "./runtime-paths";
+import { removeCompletedDownloadArtifacts } from "./download-artifacts";
 
 export type GpuManifestPart = {
 	name: string;
@@ -154,6 +155,14 @@ function readInstalledVersion() {
 	return null;
 }
 
+function cleanupInstalledDownloadArtifacts() {
+	const version = readInstalledVersion();
+	if (!version) return;
+	removeCompletedDownloadArtifacts(
+		path.join(componentsRoot(), "runtime-ml-cuda", "downloads", version),
+	);
+}
+
 async function fetchManifest(): Promise<GpuManifest | null> {
 	const url = gpuManifestUrl();
 	if (!url) return null;
@@ -209,6 +218,7 @@ function isManifest(value: unknown): value is GpuManifest {
 }
 
 export async function getGpuRuntimeStatus(): Promise<GpuRuntimeStatus> {
+	cleanupInstalledDownloadArtifacts();
 	const probe = probeGpu();
 	const manifest = await fetchManifest();
 	const localCuda = Boolean(localTorchCudaDll());
@@ -330,6 +340,7 @@ async function runInstall(manifest: GpuManifest) {
 		`${JSON.stringify({ version: manifest.version, installedAt: new Date().toISOString() }, null, 2)}\n`,
 		"utf8",
 	);
+	removeCompletedDownloadArtifacts(downloadDir);
 	job = {
 		state: "done",
 		received: manifest.size,

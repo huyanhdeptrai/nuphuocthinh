@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { ttsEngineRoot, type TtsEngineId } from "./tts-engine-paths";
+import { removeCompletedDownloadArtifacts } from "./download-artifacts";
 
 const USER_AGENT = "Lemyloi-dichvideo-TTS-Engines";
 const ENGINES: TtsEngineId[] = ["vieneu", "supertonic", "omnivoice"];
@@ -45,7 +46,7 @@ async function fetchManifest(engine: TtsEngineId) {
 	return parsed;
 }
 export async function getTtsEngineStatuses(): Promise<TtsEngineStatus[]> {
-	return Promise.all(ENGINES.map(async (engine) => { let manifest: TtsEngineManifest | null = null; try { manifest = await fetchManifest(engine); } catch { /* offline status is still useful */ } return { engine, installed: Boolean(installedVersion(engine)), installedVersion: installedVersion(engine), manifest: manifest ? { version: manifest.version, size: manifest.size, partCount: manifest.parts.length } : null, job: jobs.get(engine) ?? null }; }));
+	return Promise.all(ENGINES.map(async (engine) => { const version = installedVersion(engine); if (version) removeCompletedDownloadArtifacts(path.join(ttsEngineRoot(workspaceRoot(), engine), "downloads", version)); let manifest: TtsEngineManifest | null = null; try { manifest = await fetchManifest(engine); } catch { /* offline status is still useful */ } return { engine, installed: Boolean(version), installedVersion: version, manifest: manifest ? { version: manifest.version, size: manifest.size, partCount: manifest.parts.length } : null, job: jobs.get(engine) ?? null }; }));
 }
 export async function installTtsEngine(engine: TtsEngineId) {
 	if (running.has(engine)) return getTtsEngineStatuses();
@@ -74,6 +75,7 @@ async function runInstall(engine: TtsEngineId, manifest: TtsEngineManifest) {
 	const sourceRoot = fs.existsSync(extractedRoot) ? extractedRoot : staging;
 	for (const entry of fs.readdirSync(sourceRoot)) fs.renameSync(path.join(sourceRoot, entry), path.join(root, entry)); fs.rmSync(staging, { recursive: true, force: true });
 	fs.writeFileSync(marker(engine), `${JSON.stringify({ engine, version: manifest.version, installedAt: new Date().toISOString() }, null, 2)}\n`);
+	removeCompletedDownloadArtifacts(downloads);
 	jobs.set(engine, { state: "done", received: manifest.size, total: manifest.size, version: manifest.version });
 }
 async function download(part: TtsEngineManifest["parts"][number], dest: string, onBytes: (delta: number) => void) { if (fs.existsSync(dest) && fs.statSync(dest).size === part.size) { onBytes(part.size); return; } if (fs.existsSync(dest)) fs.rmSync(dest, { force: true }); const response = await fetch(part.url, { headers: { "User-Agent": USER_AGENT }, redirect: "follow" }); if (!response.ok || !response.body) throw new Error(`Không tải được ${part.name} (HTTP ${response.status}).`); const file = fs.createWriteStream(dest); for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) { file.write(Buffer.from(chunk)); onBytes(chunk.byteLength); } await new Promise<void>((resolve, reject) => file.end((error: Error | null) => error ? reject(error) : resolve())); if (fs.statSync(dest).size !== part.size) throw new Error(`Tải chưa đủ ${part.name}.`); }

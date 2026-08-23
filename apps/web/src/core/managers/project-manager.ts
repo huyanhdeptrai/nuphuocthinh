@@ -29,6 +29,11 @@ import {
 	type MigrationProgress,
 } from "@/services/storage/migrations";
 import { DEFAULT_TIMELINE_VIEW_STATE } from "@/constants/timeline-constants";
+import {
+	createProjectPackage,
+	projectPackageFilename,
+	readProjectPackage,
+} from "@/services/storage/project-package";
 
 export interface MigrationState {
 	isMigrating: boolean;
@@ -199,6 +204,47 @@ export class ProjectManager {
 
 	async export({ options }: { options: ExportOptions }): Promise<ExportResult> {
 		return this.editor.renderer.exportProject({ options });
+	}
+
+	async exportPortableProject({ id }: { id: string }): Promise<{ blob: Blob; filename: string }> {
+		const result = await storageService.loadProject({ id });
+		if (!result) throw new Error("Không tìm thấy dự án để xuất.");
+		const mediaAssets = await storageService.loadAllMediaAssets({ projectId: id });
+		return {
+			blob: await createProjectPackage({ project: result.project, mediaAssets }),
+			filename: projectPackageFilename(result.project.metadata.name),
+		};
+	}
+
+	async importPortableProject({ file }: { file: File }): Promise<string> {
+		const { project, mediaAssets } = await readProjectPackage({ file });
+		const projectId = generateUUID();
+		const importedProject: TProject = {
+			...project,
+			metadata: {
+				...project.metadata,
+				id: projectId,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			},
+		};
+
+		try {
+			await storageService.saveProject({ project: importedProject });
+			await Promise.all(
+				mediaAssets.map((mediaAsset) =>
+					storageService.saveMediaAsset({ projectId, mediaAsset }),
+				),
+			);
+			this.updateMetadata(importedProject);
+			return projectId;
+		} catch (error) {
+			await Promise.all([
+				storageService.deleteProjectMedia({ projectId }),
+				storageService.deleteProject({ id: projectId }),
+			]);
+			throw error;
+		}
 	}
 
 	async loadAllProjects(): Promise<void> {
