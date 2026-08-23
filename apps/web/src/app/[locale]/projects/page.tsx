@@ -890,7 +890,7 @@ function ProjectMenu({
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={handleExportPortable}>
 						<HugeiconsIcon icon={ArrowDown02Icon} />
-						Xuất dự án (.ldvproj)
+						Xuất gói dự án + media (.ldvproj)
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={handleInfoClick}>
 						<HugeiconsIcon icon={InformationCircleIcon} />
