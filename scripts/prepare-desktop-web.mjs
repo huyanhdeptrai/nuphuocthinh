@@ -29,6 +29,16 @@ const swcHelpersBunPackage = path.basename(
 	path.resolve(swcHelpersRoot, "..", "..", ".."),
 );
 
+function copyDirectoryContents(sourceRoot, destinationRoot) {
+	fs.mkdirSync(destinationRoot, { recursive: true });
+	for (const entry of fs.readdirSync(sourceRoot, { withFileTypes: true })) {
+		const source = path.join(sourceRoot, entry.name);
+		const destination = path.join(destinationRoot, entry.name);
+		fs.rmSync(destination, { recursive: true, force: true });
+		fs.cpSync(source, destination, { recursive: true, force: true });
+	}
+}
+
 function materializeStandaloneNodeModuleLinks(root) {
 	const pending = [root];
 	while (pending.length > 0) {
@@ -111,16 +121,6 @@ for (const file of pythonSupport) {
 	}
 }
 
-// Bun's hoisted node_modules layout can omit this transitive Next.js runtime
-// dependency from the standalone trace. Copy it explicitly so Electron's
-// bundled Node runtime can start the local Next server.
-for (const runtimeRoot of runtimeRoots) {
-	fs.cpSync(
-		swcHelpersRoot,
-		path.join(runtimeRoot, "node_modules", "@swc", "helpers"),
-		{ recursive: true, force: true },
-	);
-}
 // Next itself is resolved from Bun's `.bun/next@...` directory. Its helper
 // symlink points at the matching `.bun/@swc+helpers@...` package, so retain
 // that target too instead of shipping a dangling symlink.
@@ -140,6 +140,48 @@ fs.cpSync(
 // Node in Electron cannot reliably resolve Bun's Windows symlinks from inside
 // an installed ASAR resource. Materialise their in-bundle targets instead.
 materializeStandaloneNodeModuleLinks(path.join(standaloneRoot, "node_modules"));
+
+// In the generated monorepo standalone output, apps/web/node_modules/next is
+// still a symlink into Bun's store. electron-builder preserves it as a junction
+// in win-unpacked, but NSIS installs it as a plain directory. Node then searches
+// beside that directory and can no longer find @next/env (or Next's other
+// peers). Mirror Bun's traced, hoisted runtime packages beside server.js so the
+// installed layout is independent of symlink/junction semantics.
+if (appRoot !== standaloneRoot) {
+	copyDirectoryContents(
+		path.join(standaloneRoot, "node_modules", ".bun", "node_modules"),
+		path.join(appRoot, "node_modules"),
+	);
+}
+
+// Bun's trace can still omit this helper from the hoisted runtime set. Keep an
+// explicit physical copy in every server root used by desktop packaging.
+for (const runtimeRoot of runtimeRoots) {
+	fs.cpSync(
+		swcHelpersRoot,
+		path.join(runtimeRoot, "node_modules", "@swc", "helpers"),
+		{ recursive: true, force: true },
+	);
+}
+
+const appServerRequire = createRequire(path.join(appRoot, "server.js"));
+for (const dependency of [
+	"next",
+	"@next/env",
+	"@swc/helpers/_/_interop_require_default",
+	"react",
+	"react-dom",
+	"styled-jsx",
+]) {
+	try {
+		appServerRequire.resolve(dependency);
+	} catch (error) {
+		throw new Error(
+			`Desktop standalone dependency is not resolvable: ${dependency}`,
+			{ cause: error },
+		);
+	}
+}
 
 const capcutVenv = path.join(
 	root,
