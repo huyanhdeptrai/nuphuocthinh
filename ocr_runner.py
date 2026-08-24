@@ -143,7 +143,7 @@ def recognize_rapidocr_crop(
 
 
 def build_rapidocr_pipeline(lang: str, engine: str = "rapidocr"):
-    """Build a PP-OCRv6 ONNX profile for accurate or lightweight video OCR."""
+    """Build the newest RapidOCR profile supported by the installed runtime."""
     from rapidocr import RapidOCR
     from rapidocr.utils.typings import ModelType, OCRVersion
 
@@ -157,22 +157,17 @@ def build_rapidocr_pipeline(lang: str, engine: str = "rapidocr"):
         "ko": "korean",
     }
     model_lang = language_map.get(lang, "ch")
-    def create_rapid(profile: dict):
-        base_model_type = profile.get("model_type", "small")
+    def create_rapid(profile: dict, ocr_version, model_type):
         rapid_params = {
             "Global.log_level": "error",
             "Global.text_score": 0.55,
-            "Det.ocr_version": OCRVersion.PPOCRV6,
-            "Det.model_type": ModelType(
-                profile.get("det_model_type", base_model_type),
-            ),
+            "Det.ocr_version": ocr_version,
+            "Det.model_type": model_type,
             "Det.lang_type": model_lang,
             "Det.limit_type": "max",
             "Det.limit_side_len": profile["det_limit_side_len"],
-            "Rec.ocr_version": OCRVersion.PPOCRV6,
-            "Rec.model_type": ModelType(
-                profile.get("rec_model_type", base_model_type),
-            ),
+            "Rec.ocr_version": ocr_version,
+            "Rec.model_type": model_type,
             "Rec.lang_type": model_lang,
         }
         onnx_threads = profile.get("onnx_threads")
@@ -186,21 +181,43 @@ def build_rapidocr_pipeline(lang: str, engine: str = "rapidocr"):
         return RapidOCR(params=rapid_params)
 
     profile = get_rapidocr_profile(engine)
-    try:
-        rapid = create_rapid(profile)
-    except Exception as error:
-        # Older RapidOCR model registries do not ship PP-OCRv6 Tiny. This is a
-        # dependency/version mismatch, not a GPU error. Original-subtitle scans
-        # must remain usable on those machines, so transparently use Small.
-        unsupported_tiny = (
-            engine == "rapidocr-tiny"
-            and "unsupported configuration" in str(error).lower()
-            and "tiny" in str(error).lower()
-        )
-        if not unsupported_tiny:
-            raise
-        profile = RAPIDOCR_PROFILES["rapidocr"]
-        rapid = create_rapid(profile)
+    preferred_model = profile.get("det_model_type", profile.get("model_type", "small")).upper()
+    # RapidOCR releases do not all bundle the same PP-OCR model registry.  Try
+    # the requested v6 profile first, then progressively older, portable
+    # mobile profiles.  This is intentionally CPU-safe and unrelated to CUDA.
+    candidates = [
+        ("PPOCRV6", preferred_model),
+        ("PPOCRV6", "SMALL"),
+        ("PPOCRV5", "MOBILE"),
+        ("PPOCRV4", "MOBILE"),
+    ]
+    rapid = None
+    selected_version = ""
+    selected_model = ""
+    errors: list[str] = []
+    attempted: set[tuple[str, str]] = set()
+    for version_name, model_name in candidates:
+        candidate = (version_name, model_name)
+        if candidate in attempted:
+            continue
+        attempted.add(candidate)
+        ocr_version = getattr(OCRVersion, version_name, None)
+        model_type = getattr(ModelType, model_name, None)
+        if ocr_version is None or model_type is None:
+            continue
+        try:
+            rapid = create_rapid(profile, ocr_version, model_type)
+            selected_version = str(getattr(ocr_version, "value", version_name))
+            selected_model = str(getattr(model_type, "value", model_name)).title()
+            break
+        except Exception as error:
+            message = str(error)
+            errors.append(f"{version_name}/{model_name}: {message}")
+            if "unsupported configuration" not in message.lower():
+                raise
+    if rapid is None:
+        detail = "; ".join(errors) or "No compatible OCR model profile was found"
+        raise RuntimeError(f"RapidOCR has no supported local model configuration: {detail}")
 
     def recognize(image):
         return recognize_rapidocr_crop(rapid, image, lang)
@@ -234,7 +251,7 @@ def build_rapidocr_pipeline(lang: str, engine: str = "rapidocr"):
             ).clamped())
         return boxes
 
-    return recognize, detect, f"RapidOCR PP-OCRv6 {profile['label']} ONNX"
+    return recognize, detect, f"RapidOCR {selected_version} {selected_model} ONNX"
 
 
 def build_recognizer(engine: str, lang: str):
@@ -392,13 +409,26 @@ def main() -> int:
                         args.engine,
                     )
                     detector_name = (
-                        f"RapidOCR PP-OCRv6 {profile['detector_label']} detector "
+                        f"{engine_name} detector "
                         f"({profile['det_limit_side_len']}px max side)"
                     )
                 except ImportError as error:
                     raise RuntimeError(
                         "RapidOCR is not installed. Run: python -m pip install -r requirements-ocr.txt"
                     ) from error
+                except RuntimeError:
+                    # Original-subtitle sync only needs the cue timing and
+                    # geometry, never OCR text. If an old RapidOCR runtime has
+                    # no compatible model registry at all, keep this workflow
+                    # available with the local detector fallback.
+                    if not args.detect_only:
+                        raise
+                    detector, detector_name = build_text_detector()
+
+                    def recognize(_image):
+                        return [], 0.0
+
+                    engine_name = f"{detector_name} compatibility fallback"
             else:
                 recognize, engine_name = build_recognizer(args.engine, args.lang)
                 detector, detector_name = build_text_detector()
