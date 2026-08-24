@@ -87,7 +87,10 @@ export function OriginalSubtitleScanTab() {
 		setStatus("Đang quét nhanh cue phụ đề gốc…");
 		try {
 			const formData = new FormData();
-			formData.append("engine", "rapidocr-tiny");
+			// Small is available in both old and current RapidOCR packages. The
+			// detector-only pass remains fast while avoiding Tiny's version-specific
+			// ONNX model registry on another machine.
+			formData.append("engine", "rapidocr");
 			formData.append("mode", "detect-only");
 			formData.append("language", "auto");
 			formData.append("rois", JSON.stringify(sourceRegions));

@@ -285,7 +285,7 @@ export function OverlaysView() {
 		setOriginalSubtitleScanStatus("Đang quét nhanh vị trí và thời gian phụ đề gốc…");
 		try {
 			const formData = new FormData();
-			formData.append("engine", "rapidocr-tiny");
+			formData.append("engine", "rapidocr");
 			formData.append("mode", "detect-only");
 			formData.append("language", "auto");
 			formData.append("rois", JSON.stringify(sourceRegions));

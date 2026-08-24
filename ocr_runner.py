@@ -157,35 +157,50 @@ def build_rapidocr_pipeline(lang: str, engine: str = "rapidocr"):
         "ko": "korean",
     }
     model_lang = language_map.get(lang, "ch")
+    def create_rapid(profile: dict):
+        base_model_type = profile.get("model_type", "small")
+        rapid_params = {
+            "Global.log_level": "error",
+            "Global.text_score": 0.55,
+            "Det.ocr_version": OCRVersion.PPOCRV6,
+            "Det.model_type": ModelType(
+                profile.get("det_model_type", base_model_type),
+            ),
+            "Det.lang_type": model_lang,
+            "Det.limit_type": "max",
+            "Det.limit_side_len": profile["det_limit_side_len"],
+            "Rec.ocr_version": OCRVersion.PPOCRV6,
+            "Rec.model_type": ModelType(
+                profile.get("rec_model_type", base_model_type),
+            ),
+            "Rec.lang_type": model_lang,
+        }
+        onnx_threads = profile.get("onnx_threads")
+        if onnx_threads:
+            cv2.setNumThreads(profile.get("opencv_threads", 1))
+            rapid_params.update({
+                "EngineConfig.onnxruntime.intra_op_num_threads": onnx_threads,
+                "EngineConfig.onnxruntime.inter_op_num_threads": 1,
+                "EngineConfig.onnxruntime.enable_cpu_mem_arena": False,
+            })
+        return RapidOCR(params=rapid_params)
+
     profile = get_rapidocr_profile(engine)
-    base_model_type = profile.get("model_type", "small")
-    detector_model_type = ModelType(
-        profile.get("det_model_type", base_model_type),
-    )
-    recognizer_model_type = ModelType(
-        profile.get("rec_model_type", base_model_type),
-    )
-    rapid_params = {
-        "Global.log_level": "error",
-        "Global.text_score": 0.55,
-        "Det.ocr_version": OCRVersion.PPOCRV6,
-        "Det.model_type": detector_model_type,
-        "Det.lang_type": model_lang,
-        "Det.limit_type": "max",
-        "Det.limit_side_len": profile["det_limit_side_len"],
-        "Rec.ocr_version": OCRVersion.PPOCRV6,
-        "Rec.model_type": recognizer_model_type,
-        "Rec.lang_type": model_lang,
-    }
-    onnx_threads = profile.get("onnx_threads")
-    if onnx_threads:
-        cv2.setNumThreads(profile.get("opencv_threads", 1))
-        rapid_params.update({
-            "EngineConfig.onnxruntime.intra_op_num_threads": onnx_threads,
-            "EngineConfig.onnxruntime.inter_op_num_threads": 1,
-            "EngineConfig.onnxruntime.enable_cpu_mem_arena": False,
-        })
-    rapid = RapidOCR(params=rapid_params)
+    try:
+        rapid = create_rapid(profile)
+    except Exception as error:
+        # Older RapidOCR model registries do not ship PP-OCRv6 Tiny. This is a
+        # dependency/version mismatch, not a GPU error. Original-subtitle scans
+        # must remain usable on those machines, so transparently use Small.
+        unsupported_tiny = (
+            engine == "rapidocr-tiny"
+            and "unsupported configuration" in str(error).lower()
+            and "tiny" in str(error).lower()
+        )
+        if not unsupported_tiny:
+            raise
+        profile = RAPIDOCR_PROFILES["rapidocr"]
+        rapid = create_rapid(profile)
 
     def recognize(image):
         return recognize_rapidocr_crop(rapid, image, lang)
