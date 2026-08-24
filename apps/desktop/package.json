@@ -1,6 +1,6 @@
 {
   "name": "@lemyloi-dichvideo/desktop",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Lemyloi-dichvideo desktop video editor",
   "author": "Lemyloi-dichvideo",
   "packageManager": "bun@1.2.18",

@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const webRoot = path.join(root, "apps", "web");
+const ocrRuntimeSource = path.join(root, ".local-services", "ocr-runtime");
 const standaloneRoot = path.join(webRoot, ".next", "standalone");
 const staticSource = path.join(webRoot, ".next", "static");
 const publicSource = path.join(webRoot, "public");
@@ -85,6 +86,11 @@ if (!fs.existsSync(path.join(appRoot, "server.js"))) {
 if (!fs.existsSync(staticSource)) {
 	throw new Error("Next static output is missing. Run the web build first.");
 }
+if (!fs.existsSync(path.join(ocrRuntimeSource, "python", "python.exe"))) {
+	throw new Error(
+		"Portable OCR runtime is missing. Run: powershell -ExecutionPolicy Bypass -File scripts/prepare-ocr-runtime.ps1",
+	);
+}
 
 fs.cpSync(staticSource, path.join(appRoot, ".next", "static"), {
 	recursive: true,
@@ -119,6 +125,16 @@ for (const file of pythonSupport) {
 		fs.mkdirSync(path.dirname(destination), { recursive: true });
 		fs.copyFileSync(file.source, destination);
 	}
+}
+
+// OCR is part of the base desktop experience, unlike optional GPU/TTS packs.
+// Ship the pinned Python interpreter, native libraries and preloaded subtitle
+// models so installed copies never depend on a system-wide Python/RapidOCR.
+for (const runtimeRoot of runtimeRoots) {
+	fs.cpSync(ocrRuntimeSource, path.join(runtimeRoot, "ocr-runtime"), {
+		recursive: true,
+		force: true,
+	});
 }
 
 // Next itself is resolved from Bun's `.bun/next@...` directory. Its helper

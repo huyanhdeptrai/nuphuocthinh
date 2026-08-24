@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { exec } from "child_process";
+import { exec, execFile } from "child_process";
 import { promisify } from "util";
 import fs from "fs";
 import path from "path";
@@ -17,7 +17,14 @@ import {
 import { runSpeakerDiarizationWorker } from "@/dubbing/services/speaker-diarization-worker";
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const LOCAL_OCR_ENGINES = ["paddleocr", "rapidocr", "rapidocr-tiny", "easyocr"];
+
+function resolveOcrPython(scriptPath: string) {
+	const bundled = path.join(path.dirname(scriptPath), "ocr-runtime", "python", "python.exe");
+	if (fs.existsSync(bundled)) return bundled;
+	throw new Error("OCR runtime đi kèm ứng dụng bị thiếu. Hãy cài lại Lemyloi-dichvideo.");
+}
 
 interface DiarizationOutput {
 	success: boolean;
@@ -250,13 +257,19 @@ export async function POST(req: Request) {
 					}
 				}
 				const roisBase64 = Buffer.from(runnerRois, "utf8").toString("base64");
-				const detectOnlyArgs = detectOnly
-					? " --detect-only --detector-fps 8 --stability-ms 80 --missing-grace-ms 180"
-					: "";
-				const { stdout } = await execAsync(
-					`python "${scriptPath}" --engine ${engine} ${mediaArgument} "${inputTempPath}" --lang ${langCode} --rois-base64 ${roisBase64}${detectOnlyArgs}`,
-					{ maxBuffer: 1024 * 1024 * 50 }
-				);
+					const ocrPython = resolveOcrPython(scriptPath);
+					const runnerArgs = [
+						scriptPath,
+						"--engine", engine,
+						mediaArgument, inputTempPath,
+						"--lang", langCode,
+						"--rois-base64", roisBase64,
+						...(detectOnly ? ["--detect-only", "--detector-fps", "8", "--stability-ms", "80", "--missing-grace-ms", "180"] : []),
+					];
+					const { stdout } = await execFileAsync(ocrPython, runnerArgs, {
+						maxBuffer: 1024 * 1024 * 50,
+						windowsHide: true,
+					});
 				const resData = JSON.parse(stdout);
 
 				if (resData.success) {

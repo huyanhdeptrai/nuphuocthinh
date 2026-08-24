@@ -7,6 +7,7 @@ import base64
 import json
 import os
 import sys
+from pathlib import Path
 
 # Suppress Paddle & PaddleX logs
 os.environ["FLAGS_allocator_strategy"] = "naive_best_fit"
@@ -24,6 +25,12 @@ except Exception:
 
 real_stdout = sys.__stdout__
 sys.stdout = sys.stderr
+
+# Python's embeddable Windows runtime does not automatically add the script
+# directory to sys.path. Keep sibling pipeline modules resolvable in the EXE.
+runner_root = str(Path(__file__).resolve().parent)
+if runner_root not in sys.path:
+    sys.path.insert(0, runner_root)
 
 import cv2
 import numpy as np
@@ -181,15 +188,13 @@ def build_rapidocr_pipeline(lang: str, engine: str = "rapidocr"):
         return RapidOCR(params=rapid_params)
 
     profile = get_rapidocr_profile(engine)
+    # The desktop runtime ships both PP-OCRv6 profiles offline. Preserve the
+    # user's selected Tiny/Small profile instead of substituting another OCR
+    # generation, then only use Small as a same-generation fallback.
     preferred_model = profile.get("det_model_type", profile.get("model_type", "small")).upper()
-    # RapidOCR releases do not all bundle the same PP-OCR model registry.  Try
-    # the requested v6 profile first, then progressively older, portable
-    # mobile profiles.  This is intentionally CPU-safe and unrelated to CUDA.
     candidates = [
         ("PPOCRV6", preferred_model),
         ("PPOCRV6", "SMALL"),
-        ("PPOCRV5", "MOBILE"),
-        ("PPOCRV4", "MOBILE"),
     ]
     rapid = None
     selected_version = ""
