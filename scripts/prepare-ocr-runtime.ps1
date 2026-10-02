@@ -49,7 +49,11 @@ try {
 
 	$sitePackages = Join-Path $pythonRoot "Lib\site-packages"
 	New-Item -ItemType Directory -Path $sitePackages -Force | Out-Null
-	& $buildPython -m pip --python $runtimePython install --disable-pip-version-check --no-warn-script-location --target $sitePackages -r $requirements
+	# Embedded Python ignores the environment paths used by pip build isolation.
+	# Install build tools into its own site-packages before building pure-Python dependencies.
+	& $buildPython -m pip --python $runtimePython install --disable-pip-version-check --no-warn-script-location --target $sitePackages setuptools wheel
+	if ($LASTEXITCODE -ne 0) { throw "Could not install the OCR runtime build tools." }
+	& $buildPython -m pip --python $runtimePython install --no-build-isolation --disable-pip-version-check --no-warn-script-location --target $sitePackages -r $requirements
 	if ($LASTEXITCODE -ne 0) { throw "Could not install the pinned OCR packages." }
 
 	# Download the exact Chinese subtitle detector/recognizer once while packaging.
