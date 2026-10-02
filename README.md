@@ -3,113 +3,165 @@
 </p>
 
 <h1 align="center">nuphuocthinh</h1>
-<p align="center">Tool dịch videos của iemhanh</p>
+<p align="center">Trình biên tập video Local-First: Tự động Nhận dạng giọng nói (STT), Dịch thuật &amp; Thuyết minh (TTS)</p>
 <p align="center">sản phẩm vừa lọ vừa đè tem của iemhanh</p>
+
+<p align="center">
+  <a href="https://github.com/huyanhdeptrai/nuphuocthinh/releases/latest">Tải bản Windows</a> ·
+  <a href="#bắt-đầu-sử-dụng">Hướng dẫn sử dụng</a> ·
+  <a href="#phát-triển">Chạy từ mã nguồn</a>
+</p>
 
 ## Giới thiệu
 
-**nuphuocthinh** là công cụ nhận dạng, dịch phụ đề, thuyết minh và chỉnh sửa video trên máy cá nhân.
+**nuphuocthinh** giúp bạn chuyển một video thành nội dung có phụ đề và thuyết minh: nhận dạng lời nói, đọc chữ trong khung hình, dịch sang ngôn ngữ đích, tạo giọng đọc và hoàn thiện trên timeline.
 
-Khi mở ứng dụng, popup chào mừng hiển thị ảnh giới thiệu. Bấm **Bắt đầu dịch videos**, nút đóng hoặc Escape để vào công cụ. Popup xuất hiện lại khi mở ứng dụng hoặc tải lại trang, không xuất hiện lại khi chuyển trang trong cùng phiên giao diện.
+Ứng dụng được thiết kế theo hướng **Local-First**: dự án và media được lưu trên thiết bị, với các runtime xử lý tại máy cho những tính năng được hỗ trợ. Bạn có thể kết hợp công cụ local với Google Dịch hoặc các dịch vụ AI/TTS theo nhu cầu.
 
 ![Giới thiệu nuphuocthinh](apps/web/public/brand/nuphuocthinh/introduction.webp)
 
 ## Tính năng
 
-- Nhập video và chỉnh sửa trên timeline nhiều lớp.
-- Nhận dạng lời nói bằng ASR, quét phụ đề có sẵn trong video bằng OCR.
-- Dịch phụ đề bằng Google Dịch, OpenRouter hoặc API tương thích tùy chỉnh.
-- Thuyết minh/TTS, quản lý giọng nói, clone giọng và tách âm thanh tùy runtime/nhà cung cấp được cấu hình.
-- Căn chỉnh phụ đề, che phụ đề gốc, thêm lớp phủ và hiệu ứng.
-- Xuất video; nhập/xuất dự án `.ldvproj` kèm media để sao lưu hoặc chuyển máy.
-- Chạy trên trình duyệt hoặc ứng dụng desktop Windows.
+| Nhóm | Khả năng |
+| --- | --- |
+| Nhận dạng giọng nói — STT/ASR | Chuyển lời nói thành văn bản để tạo phụ đề |
+| Nhận dạng chữ — OCR | Đọc phụ đề có sẵn trong khung hình video |
+| Dịch thuật | Dịch bằng Google Dịch, OpenRouter hoặc API tùy chỉnh tương thích |
+| Thuyết minh — TTS | Tạo giọng đọc, quản lý giọng và clone giọng tùy engine/nhà cung cấp |
+| Biên tập video | Timeline nhiều lớp, cắt ghép, căn chỉnh phụ đề và âm thanh |
+| Hoàn thiện hình ảnh | Che phụ đề gốc, thêm văn bản, lớp phủ và hiệu ứng |
+| Xử lý âm thanh | Tách âm thanh và các bước xử lý tùy runtime được cấu hình |
+| Xuất và sao lưu | Xuất video, nhập/xuất dự án `.ldvproj` kèm media |
 
-## Chạy ứng dụng
+Ứng dụng có giao diện web và bản desktop Windows sử dụng Electron.
 
-### Tải bản Windows
+## Cài đặt Windows
 
-Mở [Releases](https://github.com/huyanhdeptrai/nuphuocthinh/releases/latest), tải file `nuphuocthinh.Setup.…exe` trong mục **Assets** và chạy để cài đặt.
+1. Mở [Releases](https://github.com/huyanhdeptrai/nuphuocthinh/releases/latest).
+2. Trong **Assets**, tải bộ cài `.exe` có tên bắt đầu bằng `nuphuocthinh.Setup.`.
+3. Chạy bộ cài, chọn thư mục cài đặt và mở **nuphuocthinh**.
 
-### Chạy từ mã nguồn
+Bộ cài dành cho **Windows x64**, kèm Python portable, runtime OCR và model nhận dạng phụ đề. Các runtime GPU/TTS bổ sung được cấu hình hoặc tải qua giao diện khi cần.
 
-Yêu cầu: Node.js và Bun. Mở terminal trong thư mục `nuphuocthinh`:
+Release có file `SHA256SUMS.txt` để đối chiếu checksum của bộ cài.
+
+## Bắt đầu sử dụng
+
+1. Bấm **Bắt đầu dịch videos** ở màn hình chào mừng.
+2. Tạo dự án mới hoặc mở dự án đã lưu, rồi nhập video.
+3. Dùng **STT/ASR** để nhận dạng lời nói hoặc **OCR** để đọc phụ đề trong video.
+4. Kiểm tra văn bản, chọn ngôn ngữ đích và nhà cung cấp dịch.
+5. Chỉnh sửa bản dịch và áp dụng phụ đề lên timeline.
+6. Chọn engine và giọng **TTS** nếu muốn tạo thuyết minh.
+7. Căn chỉnh thời gian, âm lượng, kiểu phụ đề và các lớp hình ảnh, rồi xuất video.
+
+Xuất dự án `.ldvproj` kèm media để sao lưu hoặc chuyển sang máy khác.
+
+## Cấu hình dịch thuật và giọng nói
+
+### Google Dịch
+
+Chọn **Google Dịch** để dịch phụ đề mà không cần nhập API key. Nội dung phụ đề được gửi tới Google khi thực hiện dịch.
+
+Lựa chọn này không áp dụng prompt phong cách hoặc vai nhân vật của chế độ AI. Kết nối có thể bị giới hạn hoặc gián đoạn; lỗi dịch được hiển thị trong giao diện để bạn kiểm tra và thử lại.
+
+### OpenRouter và API tùy chỉnh
+
+Với **OpenRouter**, nhập API key của bạn và chọn model dịch. Với **API tùy chỉnh**, cấu hình endpoint, model và API key theo dịch vụ đang dùng.
+
+Chế độ AI hỗ trợ cấu hình phong cách dịch và vai nhân vật. Kiểm tra kết nối trước khi chạy dịch cho toàn bộ video.
+
+### STT, OCR và TTS local
+
+Các tính năng chạy tại máy cần runtime, model và công cụ xử lý media tương ứng. Tùy engine, bạn có thể cần Python, FFmpeg hoặc runtime GPU.
+
+Trong giao diện, chọn engine/nhà cung cấp và cài các thành phần cần thiết trước khi chạy. Khả năng clone giọng, tách âm thanh và tăng tốc GPU phụ thuộc vào engine và phần cứng. Các nhà cung cấp TTS cloud có thể yêu cầu API key riêng.
+
+## Dữ liệu và kết nối mạng
+
+Dự án và media được lưu trên thiết bị qua **IndexedDB** và **OPFS**. File `.ldvproj` giúp giữ bản sao có thể mang sang thiết bị khác; nên xuất bản sao trước khi xóa dữ liệu trình duyệt.
+
+Google Dịch và các dịch vụ AI/TTS cloud gửi nội dung cần xử lý tới nhà cung cấp khi bạn sử dụng. Việc tải runtime, model, font và một số tài nguyên cũng cần kết nối mạng. Khả năng dùng offline phụ thuộc vào tính năng và những thành phần đã có trên máy.
+
+API key được cấu hình bằng tài khoản của bạn. Một số cấu hình key hiện được lưu chưa mã hóa trên thiết bị; nên sử dụng trên máy cá nhân đáng tin cậy và giữ key ngoài mã nguồn. Server của ứng dụng được thiết kế để chạy local.
+
+## Phát triển
+
+### Yêu cầu
+
+- Node.js và Bun; dự án khai báo Bun `1.2.18`.
+- Windows để đóng gói bộ cài desktop Windows.
+- Python và runtime/model tương ứng nếu phát triển các tính năng STT/OCR/TTS local.
+
+### Chạy giao diện web
 
 ```powershell
+git clone https://github.com/huyanhdeptrai/nuphuocthinh.git
+cd nuphuocthinh
 bun install
 bun run dev:web
 ```
 
 Mở [http://localhost:4000](http://localhost:4000).
 
-Để chạy bản desktop trong chế độ phát triển:
+Nếu sử dụng các tích hợp phía server, tham khảo `apps/web/.env.example` và tạo `apps/web/.env.local` với cấu hình của bạn.
+
+### Chạy desktop ở chế độ phát triển
 
 ```powershell
 bun run dev:desktop
 ```
 
-ASR/OCR/TTS chạy local có thể cần runtime Python, model và FFmpeg tương ứng. Cài các thành phần cần thiết trong giao diện hoặc dùng script trong `scripts/`; chỉ bật GPU khi máy và runtime hỗ trợ.
+Lệnh này khởi động server web và mở giao diện Electron.
 
-## Quy trình sử dụng
+### Build và đóng gói
 
-1. Đóng popup chào mừng và tạo/mở dự án.
-2. Nhập video, nhận dạng ASR hoặc OCR để lấy phụ đề.
-3. Chọn nhà cung cấp dịch và ngôn ngữ đích, rồi dịch phụ đề.
-4. Kiểm tra câu dịch và áp dụng lên timeline.
-5. Tạo thuyết minh nếu cần, căn chỉnh âm thanh và xuất video.
-6. Xuất `.ldvproj` để giữ bản sao dự án và media.
-
-### Google Dịch
-
-Lựa chọn Google Dịch dùng kết nối GTX có sẵn trong mã kế thừa, không yêu cầu nhập API key. Phụ đề được gửi tới Google khi bấm dịch. Đây không phải tích hợp Google Cloud Translation API được cấu hình bằng tài khoản riêng; kết nối có thể bị giới hạn hoặc ngừng hoạt động.
-
-Google Dịch phù hợp để dịch nhanh. Các prompt phong cách và vai nhân vật của chế độ AI không áp dụng cho lựa chọn này. Khi dịch lỗi, ứng dụng hiển thị lỗi thay vì coi câu gốc là bản dịch thành công.
-
-## Đóng gói Windows
+Build giao diện web:
 
 ```powershell
-bun run dist:win
+bun run build:web
 ```
 
-Bản cài đặt nằm trong `apps/desktop/dist/`. Bước chuẩn bị desktop yêu cầu runtime OCR; nếu chưa có, chạy:
+Chuẩn bị runtime OCR cho bộ cài Windows; bước này cần Python có pip và kết nối mạng để tải interpreter, thư viện và model:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/prepare-ocr-runtime.ps1
 ```
 
-## Bố cục dự án
+Bước chuẩn bị desktop cũng sử dụng SDK CapCut TTS trong `.local-services/capcut-tts-api/`, gồm `Voice.json`, package `capcut_tts_api` và các dependency Python trong `.venv/Lib/site-packages`. Xem `scripts/prepare-desktop-web.mjs` để biết các thành phần cần đóng gói.
 
-| Thư mục | Nội dung |
-| --- | --- |
-| `apps/web/` | Giao diện web, editor và API |
-| `apps/desktop/` | Electron, icon Windows và cấu hình đóng gói |
-| `apps/web/public/brand/nuphuocthinh/` | Logo gốc, ảnh giới thiệu và icon PWA |
-| `apps/web/public/icons/` | Icon trình duyệt/thiết bị được tạo từ logo |
-| `apps/web/src/components/welcome-dialog.tsx` | Popup chào mừng |
-| `packages/` | Các package dùng chung |
-| `scripts/` | Script phát triển, chuẩn bị runtime và đóng gói |
+Khi các runtime đã sẵn sàng:
 
-Tài nguyên thương hiệu:
+```powershell
+bun run dist:win
+```
 
-- `apps/web/public/brand/nuphuocthinh/logo.png`
-- `apps/web/public/brand/nuphuocthinh/introduction.webp`
-- `apps/web/public/brand/nuphuocthinh/icon-512.png`
+Bộ cài được tạo trong `apps/desktop/dist/`. Quá trình build có thể cần mạng để tải font và công cụ đóng gói.
 
-## Dữ liệu và kết nối mạng
-
-Dự án/media được lưu trên thiết bị qua IndexedDB và OPFS. Ứng dụng đã gỡ tracker Tianji, gửi góp ý về tác giả, thư viện Vercel Analytics, BotID và thông tin donate.
-
-Các tính năng Google Dịch/AI cloud vẫn gửi nội dung tới nhà cung cấp khi sử dụng. GPU/TTS có thể kết nối GitHub để kiểm tra và tải runtime; font và một số tài nguyên khác cũng có thể cần mạng. Đây không phải bản hoàn toàn offline.
-
-API key phải dùng tài khoản của bạn và không đưa lên Git. Cách lưu một số key hiện tại chưa mã hóa; dùng máy cá nhân đáng tin cậy. Bản này hướng tới sử dụng local, chưa được gia cố để mở API ra Internet.
-
-Định dạng `.ldvproj`, các khóa lưu trữ, biến môi trường cũ và thư mục dữ liệu desktop `Lemyloi-dichvideo` được giữ tương thích để tiếp tục mở dự án và runtime đã có. Những định danh kỹ thuật này không phải tracker.
-
-## Kiểm tra
+### Kiểm tra
 
 ```powershell
 bun test apps/web/src/dubbing/services/translation.test.ts apps/web/src/services/storage/project-package.test.ts apps/web/src/dubbing/server/runtime-paths.test.ts
 ```
 
-## Nguồn mã và giấy phép
+Chạy toàn bộ test bằng `bun test`, hoặc kiểm tra lint bằng `bun run lint:web`.
 
-Mã nền kế thừa từ Lemyloi-dichvideos, Editkub, msgbyte/cutia và OpenCut. Các thông báo bản quyền và điều kiện MIT của mã kế thừa được giữ trong [LICENSE](LICENSE). Giấy phép riêng của thư viện, model, giọng nói và dịch vụ bên thứ ba vẫn áp dụng.
+## Cấu trúc dự án
+
+| Đường dẫn | Nội dung |
+| --- | --- |
+| `apps/web/` | Ứng dụng Next.js, giao diện biên tập và API |
+| `apps/web/src/core/` | EditorCore và các manager quản lý trạng thái editor |
+| `apps/web/src/dubbing/` | Luồng nhận dạng, dịch phụ đề và thuyết minh |
+| `apps/web/src/lib/` | Logic nghiệp vụ, actions và commands |
+| `apps/web/src/utils/` | Các hàm tiện ích dùng chung |
+| `apps/web/public/brand/nuphuocthinh/` | Logo, ảnh giới thiệu và icon |
+| `apps/desktop/` | Ứng dụng Electron và cấu hình bộ cài Windows |
+| `packages/` | UI và cấu hình dùng chung giữa các workspace |
+| `scripts/` | Script phát triển, chuẩn bị runtime và đóng gói |
+
+Giao diện sử dụng **React**, **TypeScript** và **Tailwind CSS**. Editor được quản lý qua **EditorCore**, với actions cho thao tác người dùng và commands cho undo/redo. Monorepo sử dụng **Bun workspaces** và **Turborepo**.
+
+## Giấy phép
+
+Dự án được phân phối theo [giấy phép MIT](LICENSE). Các thư viện, model, giọng nói và dịch vụ bên thứ ba tuân theo giấy phép và điều kiện sử dụng của từng nhà cung cấp.
