@@ -51,7 +51,13 @@ function materializeStandaloneNodeModuleLinks(root) {
 				continue;
 			}
 			if (!entry.isSymbolicLink()) continue;
-			const source = path.resolve(directory, fs.readlinkSync(entryPath));
+			let source = path.resolve(directory, fs.readlinkSync(entryPath));
+			// Next can retain absolute Bun links to the workspace on Windows.
+			// Resolve them to the matching traced dependency inside the bundle.
+			const workspaceModules = path.resolve(webRoot, "..", "..", "node_modules");
+			if (source.startsWith(workspaceModules + path.sep)) {
+				source = path.join(root, path.relative(workspaceModules, source));
+			}
 			if (!source.startsWith(root + path.sep) || !fs.existsSync(source)) {
 				throw new Error(`Standalone dependency link is invalid: ${entryPath}`);
 			}

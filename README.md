@@ -26,6 +26,12 @@ Khi mở ứng dụng, popup chào mừng hiển thị ảnh giới thiệu. B�
 
 ## Chạy ứng dụng
 
+### Tải bản Windows
+
+Mở [Releases](https://github.com/huyanhdeptrai/nuphuocthinh/releases/latest), tải file `nuphuocthinh Setup … .exe` trong mục **Assets** và chạy để cài đặt.
+
+### Chạy từ mã nguồn
+
 Yêu cầu: Node.js và Bun. Mở terminal trong thư mục `nuphuocthinh`:
 
 ```powershell
