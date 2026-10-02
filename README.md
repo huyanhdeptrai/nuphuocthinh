@@ -28,7 +28,7 @@ Khi mở ứng dụng, popup chào mừng hiển thị ảnh giới thiệu. B�
 
 ### Tải bản Windows
 
-Mở [Releases](https://github.com/huyanhdeptrai/nuphuocthinh/releases/latest), tải file `nuphuocthinh Setup … .exe` trong mục **Assets** và chạy để cài đặt.
+Mở [Releases](https://github.com/huyanhdeptrai/nuphuocthinh/releases/latest), tải file `nuphuocthinh.Setup.…exe` trong mục **Assets** và chạy để cài đặt.
 
 ### Chạy từ mã nguồn
 
