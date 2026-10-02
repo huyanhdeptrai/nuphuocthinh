@@ -6,6 +6,7 @@ import { useTranscriptionSettingsStore } from "@/stores/transcription-settings-s
 import { useAISettingsStore } from "@/stores/ai-settings-store";
 import type { RecognitionCue, TtsProvider } from "../types";
 import { translateRecognitionCues } from "./translation-pipeline";
+import { translateText } from "./translation";
 import { syncCueTextToTimeline } from "./timeline-caption-sync";
 import { mediaTimeFromSeconds, subMediaTime } from "@/dubbing/adapters/time";
 import {
@@ -176,6 +177,25 @@ export async function translateSingleCue({
 
 	const translationState = useTranslationStore.getState();
 	const dubbingState = useDubbingStore.getState();
+
+	if (translationState.provider === "google") {
+		const translated = await translateText(cue.text, {
+			targetLang: translationState.targetLanguage,
+		});
+		const resultText = translated || cue.text;
+		translationState.setTranslation({ id: cue.id, text: resultText });
+		if (editor) {
+			syncCueTextToTimeline({
+				editor,
+				cue,
+				cueIndex,
+				preferredTrackId: preferredTrackId ?? null,
+				text: resultText,
+				cueStartTime: mediaTimeFromSeconds({ seconds: cue.startTime }),
+			});
+		}
+		return resultText;
+	}
 
 	const resolvedOpenRouterKey = getResolvedOpenRouterKey({
 		openRouterApiKey: translationState.openRouterApiKey,

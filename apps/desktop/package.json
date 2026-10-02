@@ -1,19 +1,20 @@
 {
-  "name": "@lemyloi-dichvideo/desktop",
+  "name": "@nuphuocthinh/desktop",
   "version": "0.1.7",
-  "description": "Lemyloi-dichvideo desktop video editor",
-  "author": "Lemyloi-dichvideo",
+  "description": "nuphuocthinh desktop video editor",
+  "author": "nuphuocthinh",
   "packageManager": "bun@1.2.18",
   "private": true,
   "main": "main.cjs",
   "build": {
     "afterPack": "apps/desktop/after-pack.cjs",
-    "appId": "com.lemyloi-dichvideo.desktop",
-    "productName": "Lemyloi-dichvideo",
-		"icon": "icon.png",
+    "appId": "com.nuphuocthinh.desktop",
+    "productName": "nuphuocthinh",
+    "icon": "icon.ico",
     "asar": true,
     "files": [
       "main.cjs",
+      "icon.png",
       "package.json",
       "!node_modules",
       "!node_modules/**/*"

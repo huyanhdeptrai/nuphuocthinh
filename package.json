@@ -1,14 +1,14 @@
 {
-  "name": "lemyloi-dichvideo",
+  "name": "nuphuocthinh",
   "packageManager": "bun@1.2.18",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "dev:web": "turbo run dev --filter=@lemyloi-dichvideo/web",
+    "dev:web": "turbo run dev --filter=@nuphuocthinh/web",
     "dev:desktop": "bun scripts/dev-desktop.mjs",
-    "build:web": "turbo run build --filter=@lemyloi-dichvideo/web",
+    "build:web": "turbo run build --filter=@nuphuocthinh/web",
     "prepare:desktop": "bun scripts/prepare-desktop-web.mjs",
     "dist:win": "bun run build:web && bun run prepare:desktop && bunx electron-builder --project apps/desktop --win",
     "lint:web": "biome lint apps/web/src --max-diagnostics=1000",

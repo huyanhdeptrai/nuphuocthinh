@@ -38,6 +38,7 @@ import {
 } from "../translation-store";
 import type { TranslationStylePreset } from "../translation-presets";
 import { translateRecognitionCues } from "../services/translation-pipeline";
+import { translateText } from "../services/translation";
 import {
 	buildTranslatedTimelineCaptions,
 	hasCompleteTranslations,
@@ -270,6 +271,51 @@ export function TranslationView() {
 			setError("Chưa có phụ đề. Hãy nhận dạng ASR/OCR trước khi dịch.");
 			return;
 		}
+
+		if (provider === "google") {
+			setIsTranslating(true);
+			setProgress(0);
+			setStatus("Đang dịch tự động qua Google Translate...");
+			try {
+				const allTranslations: Array<{ id: string; text: string }> = [];
+				for (let i = 0; i < extractedCues.length; i++) {
+					const cue = extractedCues[i];
+					const translated = await translateText(cue.text, {
+						targetLang: targetLanguage,
+					});
+					allTranslations.push({ id: cue.id, text: translated || cue.text });
+					setProgress(Math.round(((i + 1) / extractedCues.length) * 100));
+					setStatus(`Đã dịch ${i + 1} / ${extractedCues.length} câu`);
+				}
+				setTranslations(allTranslations);
+
+				const translationMap = new Map(
+					allTranslations.map((item) => [item.id, item.text]),
+				);
+				setCues(
+					extractedCues.map((cue) => ({
+						id: cue.id,
+						startTime: cue.startTime,
+						endTime: cue.endTime,
+						text: translationMap.get(cue.id) || cue.text,
+						originalText: cue.text,
+						translatedText: translationMap.get(cue.id) || cue.text,
+						speaker: cue.speakerName || cue.speaker || "Speaker",
+						status: "ready" as const,
+					})),
+				);
+				setStatus(`Đã dịch xong ${extractedCues.length} câu.`);
+			} catch (cause) {
+				setError(
+					cause instanceof Error ? cause.message : "Dịch phụ đề thất bại.",
+				);
+				setStatus("");
+			} finally {
+				setIsTranslating(false);
+			}
+			return;
+		}
+
 		if (!activeModel.trim()) {
 			setError("Vui lòng nhập hoặc chọn model AI.");
 			return;
@@ -447,8 +493,8 @@ export function TranslationView() {
 								<Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
 									Nhà cung cấp AI
 								</Label>
-								<div className="grid grid-cols-2 gap-1">
-									{(["openrouter", "custom"] as TranslationProvider[]).map(
+								<div className="grid grid-cols-3 gap-1">
+									{(["google", "openrouter", "custom"] as TranslationProvider[]).map(
 										(item) => (
 											<button
 												key={item}
@@ -456,7 +502,11 @@ export function TranslationView() {
 												onClick={() => setProvider(item)}
 												className={`h-7 rounded-md border px-1 text-[10px] ${provider === item ? "border-violet-500 bg-violet-500/10 font-semibold text-violet-500" : "text-muted-foreground"}`}
 											>
-												{item === "openrouter" ? "OpenRouter" : "Custom"}
+												{item === "google"
+													? "Google Dịch"
+													: item === "openrouter"
+														? "OpenRouter"
+														: "Custom"}
 											</button>
 										),
 									)}
@@ -464,11 +514,21 @@ export function TranslationView() {
 							</div>
 						</div>
 						<p className="mt-1.5 text-[9px] text-emerald-600">
-							✓ Ngôn ngữ nguồn được AI tự động phát hiện từ phụ đề.
+							✓ Ngôn ngữ nguồn được tự động phát hiện từ phụ đề.
 						</p>
 					</div>
 
-					{provider === "openrouter" ? (
+					{provider === "google" ? (
+						<div className="space-y-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-foreground">
+							<div className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+								<span className="inline-block size-2 rounded-full bg-emerald-500" />
+								Google Dịch — không cần API key
+							</div>
+							<p className="text-[11px] leading-relaxed text-muted-foreground">
+								Nội dung phụ đề được gửi đến Google để dịch sang ngôn ngữ bạn chọn. Kết nối này có thể bị giới hạn hoặc gián đoạn; không áp dụng prompt phong cách và vai nhân vật như dịch bằng AI.
+							</p>
+						</div>
+					) : provider === "openrouter" ? (
 						<div className="space-y-2 rounded-lg border bg-card p-2 text-xs">
 							<div className="flex items-center justify-between">
 								<span className="font-semibold text-violet-500">
@@ -543,7 +603,7 @@ export function TranslationView() {
 								)}
 							</div>
 						</div>
-					) : (
+					) : provider === "custom" ? (
 						<div className="space-y-2 rounded-lg border bg-card p-2 text-xs">
 							<div className="flex items-center justify-between">
 								<span className="font-semibold">Cấu hình Custom API</span>
@@ -635,8 +695,9 @@ export function TranslationView() {
 								)}
 							</div>
 						</div>
-					)}
+					) : null}
 
+					{provider !== "google" && (
 					<div className="space-y-2 rounded-lg border bg-card p-2 text-xs">
 						<div className="flex items-center justify-between">
 							<span className="font-semibold">Phong cách dịch</span>
@@ -666,6 +727,8 @@ export function TranslationView() {
 						</p>
 					</div>
 
+					)}
+
 					<SpeakerRolePanel />
 
 					{(error || status) && (
@@ -687,7 +750,9 @@ export function TranslationView() {
 							<HugeiconsIcon icon={SparklesIcon} className="size-4" />
 							{isTranslating
 								? `ĐANG DỊCH PHỤ ĐỀ (${progress}%)...`
-								: `DỊCH TỰ ĐỘNG BẰNG AI (${extractedCues.length} CÂU)`}
+								: provider === "google"
+									? `DỊCH TỰ ĐỘNG BẰNG GOOGLE (${extractedCues.length} CÂU)`
+									: `DỊCH TỰ ĐỘNG BẰNG AI (${extractedCues.length} CÂU)`}
 						</Button>
 
 						{canApplyToTimeline && (

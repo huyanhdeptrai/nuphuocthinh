@@ -25,9 +25,9 @@ export async function translateText(
 			sourceLang
 		)}&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(text)}`;
 
-		const res = await fetch(url);
+		const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
 		if (!res.ok) {
-			throw new Error(`Translation HTTP error! status: ${res.status}`);
+			throw new Error(`Google Dịch trả lỗi HTTP ${res.status}. Hãy thử lại sau hoặc chọn nhà cung cấp khác.`);
 		}
 
 		const data = await res.json();
@@ -41,8 +41,8 @@ export async function translateText(
 			}
 		}
 
-		if (!translated) {
-			translated = text;
+		if (!translated.trim()) {
+			throw new Error("Google Dịch không trả về bản dịch hợp lệ.");
 		}
 
 		// Apply custom glossary if provided
@@ -51,8 +51,11 @@ export async function translateText(
 		}
 
 		return translated;
-	} catch {
-		return text;
+	} catch (error) {
+		if (error instanceof Error && error.message.startsWith("Google Dịch")) {
+			throw error;
+		}
+		throw new Error("Không kết nối được Google Dịch. Kiểm tra mạng hoặc thử lại sau.", { cause: error });
 	}
 }
 

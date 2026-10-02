@@ -139,7 +139,7 @@ export function ComparisonTable() {
 								{t("Feature")}
 							</TableHead>
 							<TableHead className="font-semibold text-green-600 dark:text-green-400">
-								Lemyloi-dichvideo
+								nuphuocthinh
 							</TableHead>
 							<TableHead className="font-semibold">CapCut</TableHead>
 						</TableRow>

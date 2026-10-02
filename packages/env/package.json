@@ -1,7 +1,7 @@
 {
-  "name": "@lemyloi-dichvideo/env",
+  "name": "@nuphuocthinh/env",
   "version": "0.0.0",
-  "description": "Environment package for Lemyloi-dichvideo",
+  "description": "Environment package for nuphuocthinh",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

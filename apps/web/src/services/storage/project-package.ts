@@ -61,7 +61,7 @@ function assertManifest(value: unknown): asserts value is PackageManifest {
 		typeof (value as Partial<PackageManifest>).project !== "object" ||
 		(value as Partial<PackageManifest>).project === null
 	) {
-		throw new Error("Tệp không phải dự án Lemyloi-dichvideo hợp lệ.");
+		throw new Error("Tệp không phải dự án nuphuocthinh hợp lệ.");
 	}
 }
 

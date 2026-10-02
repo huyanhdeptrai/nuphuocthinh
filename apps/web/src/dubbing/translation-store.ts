@@ -5,7 +5,7 @@ import {
 	type TranslationStylePreset,
 } from "./translation-presets";
 
-export type TranslationProvider = "openrouter" | "custom";
+export type TranslationProvider = "google" | "openrouter" | "custom";
 
 export interface TranslatedCueValue {
 	id: string;

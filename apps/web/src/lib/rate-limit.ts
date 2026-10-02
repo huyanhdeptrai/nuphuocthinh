@@ -1,6 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-import { webEnv } from "@lemyloi-dichvideo/env/web";
+import { webEnv } from "@nuphuocthinh/env/web";
 
 // ponytail: Redis optional — core editor works without backend services
 const redisUrl = webEnv.UPSTASH_REDIS_REST_URL;
@@ -10,7 +10,7 @@ export const baseRateLimit = redisUrl && redisToken
 	? new Ratelimit({
 			redis: new Redis({ url: redisUrl, token: redisToken }),
 			limiter: Ratelimit.slidingWindow(100, "1 m"),
-			analytics: true,
+			analytics: false,
 			prefix: "rate-limit",
 		})
 	: null;

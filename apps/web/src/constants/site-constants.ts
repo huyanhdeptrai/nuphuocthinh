@@ -1,13 +1,13 @@
-export const SITE_URL = "https://lemyloi-dichvideo.vercel.app";
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:4000";
 
 export const SITE_INFO = {
-	title: "Lemyloi-dichvideo",
+	title: "nuphuocthinh",
 	description:
-		"Lemyloi-dichvideo is an AI-native, open-source video editor in your browser — a free, privacy-first alternative to CapCut. AI-powered editing, multi-track timeline, MP4/WebM export with no uploads.",
+		"nuphuocthinh — trình chỉnh sửa, dịch phụ đề và thuyết minh video dùng cá nhân.",
 	url: SITE_URL,
-	openGraphImage: "/logos/lemyloi-dichvideo/logo.png",
-	twitterImage: "/logos/lemyloi-dichvideo/logo.png",
-	favicon: "/logos/lemyloi-dichvideo/logo.png",
+	openGraphImage: "/brand/nuphuocthinh/logo.png",
+	twitterImage: "/brand/nuphuocthinh/logo.png",
+	favicon: "/brand/nuphuocthinh/logo.png",
 };
 
 export type ExternalTool = {
@@ -19,10 +19,10 @@ export type ExternalTool = {
 
 export const EXTERNAL_TOOLS: ExternalTool[] = [];
 
-export const DEFAULT_LOGO_URL = "/logos/lemyloi-dichvideo/logo.png";
+export const DEFAULT_LOGO_URL = "/brand/nuphuocthinh/logo.png";
 
 export const SOCIAL_LINKS = {
-	x: "https://x.com/lemyloi-dichvideo",
-	github: "https://github.com/9teeedev/lemyloi-dichvideo",
+	x: "",
+	github: "",
 	discord: "",
 };

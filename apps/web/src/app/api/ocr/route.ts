@@ -23,7 +23,7 @@ const LOCAL_OCR_ENGINES = ["paddleocr", "rapidocr", "rapidocr-tiny", "easyocr"];
 function resolveOcrPython(scriptPath: string) {
 	const bundled = path.join(path.dirname(scriptPath), "ocr-runtime", "python", "python.exe");
 	if (fs.existsSync(bundled)) return bundled;
-	throw new Error("OCR runtime đi kèm ứng dụng bị thiếu. Hãy cài lại Lemyloi-dichvideo.");
+	throw new Error("OCR runtime đi kèm ứng dụng bị thiếu. Hãy cài lại nuphuocthinh.");
 }
 
 interface DiarizationOutput {

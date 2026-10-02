@@ -8,6 +8,7 @@ let nextServer;
 const DEFAULT_SERVER_PORT = 47836;
 
 function localAppDataPath() {
+	// Preserve the existing profile so saved projects and installed runtimes remain available.
 	return path.join(process.env.LOCALAPPDATA || app.getPath("appData"), "Lemyloi-dichvideo");
 }
 
@@ -110,7 +111,7 @@ function findServerScript() {
 	];
 	const serverScript = candidates.find((candidate) => fs.existsSync(candidate));
 	if (!serverScript) {
-		throw new Error("Lemyloi-dichvideo server bundle was not found in this installation.");
+		throw new Error("nuphuocthinh server bundle was not found in this installation.");
 	}
 	return serverScript;
 }
@@ -128,20 +129,20 @@ async function waitForServer(url) {
 		await new Promise((resolve) => setTimeout(resolve, 250));
 	}
 	throw new Error(
-		`Lemyloi-dichvideo local server did not start.${lastError ? ` ${lastError.message}` : ""}`,
+		`nuphuocthinh local server did not start.${lastError ? ` ${lastError.message}` : ""}`,
 	);
 }
 
 async function startProductionServer() {
 	const port = Number(process.env.LEMYLOI_DICHVIDEO_SERVER_PORT || DEFAULT_SERVER_PORT);
 	if (!Number.isInteger(port) || port < 1024 || port > 65535) {
-		throw new Error("Lemyloi-dichvideo server port is invalid.");
+		throw new Error("nuphuocthinh server port is invalid.");
 	}
 	try {
 		await assertPortAvailable(port);
 	} catch {
 		throw new Error(
-			`Cổng nội bộ ${port} đang được sử dụng. Hãy đóng Lemyloi-dichvideo đang chạy rồi mở lại.`,
+			`Cổng nội bộ ${port} đang được sử dụng. Hãy đóng nuphuocthinh đang chạy rồi mở lại.`,
 		);
 	}
 	const serverScript = findServerScript();
@@ -159,7 +160,7 @@ async function startProductionServer() {
 			PORT: String(port),
 		},
 		stdio: "pipe",
-		serviceName: "lemyloi-dichvideo-next-server",
+		serviceName: "nuphuocthinh-next-server",
 	});
 	nextServer.stderr.on("data", (chunk) => {
 		logDesktop(`[next:stderr] ${chunk}`.trimEnd());
@@ -171,7 +172,7 @@ async function startProductionServer() {
 		logDesktop(`Next server exited with code ${code ?? "unknown"}.`);
 		if (code && mainWindow && !mainWindow.isDestroyed()) {
 			dialog.showErrorBox(
-				"Lemyloi-dichvideo server stopped",
+				"nuphuocthinh server stopped",
 				`The local app server stopped unexpectedly (code ${code}).`,
 			);
 		}
@@ -188,6 +189,7 @@ function createWindow() {
 		minWidth: 1024,
 		minHeight: 720,
 		show: false,
+		icon: path.join(__dirname, "icon.png"),
 		webPreferences: {
 			contextIsolation: true,
 			nodeIntegration: false,
@@ -208,7 +210,8 @@ function createWindow() {
 	return mainWindow;
 }
 
-app.setAppUserModelId("com.lemyloi-dichvideo.desktop");
+app.setName("nuphuocthinh");
+app.setAppUserModelId("com.nuphuocthinh.desktop");
 app.setPath("userData", localAppDataPath());
 
 if (!app.requestSingleInstanceLock()) {
@@ -231,7 +234,7 @@ app.whenReady().then(async () => {
 			`Startup failed: ${error instanceof Error ? error.stack || error.message : String(error)}`,
 		);
 		dialog.showErrorBox(
-			"Lemyloi-dichvideo could not start",
+			"nuphuocthinh could not start",
 			error instanceof Error ? error.stack || error.message : String(error),
 		);
 		app.quit();

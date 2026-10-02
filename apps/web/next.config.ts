@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { withBotId } from "botid/next/config";
 
 const nextConfig: NextConfig = {
   compiler: {
@@ -11,7 +10,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./public/locales/**/*"],
   },
-  transpilePackages: ["@lemyloi-dichvideo/ui", "@lemyloi-dichvideo/env"],
+  transpilePackages: ["@nuphuocthinh/ui", "@nuphuocthinh/env"],
   images: {
     remotePatterns: [
       {
@@ -46,4 +45,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBotId(nextConfig);
+export default nextConfig;

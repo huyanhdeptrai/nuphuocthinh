@@ -49,7 +49,7 @@ try {
 
 	$sitePackages = Join-Path $pythonRoot "Lib\site-packages"
 	New-Item -ItemType Directory -Path $sitePackages -Force | Out-Null
-	& $buildPython -m pip install --disable-pip-version-check --no-warn-script-location --target $sitePackages -r $requirements
+	& $buildPython -m pip --python $runtimePython install --disable-pip-version-check --no-warn-script-location --target $sitePackages -r $requirements
 	if ($LASTEXITCODE -ne 0) { throw "Could not install the pinned OCR packages." }
 
 	# Download the exact Chinese subtitle detector/recognizer once while packaging.

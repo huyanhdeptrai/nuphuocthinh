@@ -15,7 +15,6 @@ import { Timeline } from "@/components/editor/panels/timeline";
 import { PreviewPanel } from "@/components/editor/panels/preview";
 import { EditorHeader } from "@/components/editor/editor-header";
 import { EditorProvider } from "@/components/providers/editor-provider";
-// import { Onboarding } from "@/components/editor/onboarding";
 import { MigrationDialog } from "@/components/editor/dialogs/migration-dialog";
 import { usePanelStore } from "@/stores/panel-store";
 import { useAgentStore } from "@/stores/agent-store";
@@ -62,7 +61,6 @@ function EditorShell() {
 					</div>
 				</>
 			)}
-			{/* <Onboarding /> */}
 			<MigrationDialog />
 		</div>
 	);

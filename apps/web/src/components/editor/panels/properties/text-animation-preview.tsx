@@ -47,7 +47,7 @@ export function TextAnimationPreview({
 		[],
 	);
 
-	const fullText = sampleText?.trim() || "Lemyloi-dichvideo";
+	const fullText = sampleText?.trim() || "nuphuocthinh";
 
 	useEffect(() => {
 		const canvas = canvasRef.current;

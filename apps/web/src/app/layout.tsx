@@ -1,4 +1,3 @@
-import Script from "next/script";
 import type { Viewport } from "next";
 
 import "./globals.css";
@@ -50,10 +49,7 @@ export default async function RootLayout({
 						href={url}
 					/>
 				))}
-				<Script
-					src="https://tianji.9tee.dev/tracker.js"
-					data-website-id="cmrky2xou0006fmgxlok8pf8m"
-				/>
+
 			</head>
 			<body className="font-sans antialiased">
 				{children}

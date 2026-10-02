@@ -1,3 +1,4 @@
+import { WelcomeDialog } from "@/components/welcome-dialog";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,6 +35,7 @@ export default async function LocaleLayout({
 			>
 				<TooltipProvider>
 					<Toaster />
+					<WelcomeDialog />
 					{children}
 				</TooltipProvider>
 			</ThemeProvider>

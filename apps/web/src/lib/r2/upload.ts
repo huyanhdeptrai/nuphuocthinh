@@ -1,5 +1,5 @@
 import { AwsClient } from "aws4fetch";
-import { webEnv } from "@lemyloi-dichvideo/env/web";
+import { webEnv } from "@nuphuocthinh/env/web";
 
 function getR2Config() {
 	const {

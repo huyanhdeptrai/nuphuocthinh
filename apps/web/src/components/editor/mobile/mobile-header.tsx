@@ -15,14 +15,12 @@ import {
 	ArrowLeft02Icon,
 	ArrowTurnBackwardIcon,
 	ArrowTurnForwardIcon,
-	BubbleChatIcon,
 	FullScreenIcon,
 	MoreVerticalIcon,
 	Settings01Icon,
 	TransitionTopIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 
 export function MobileHeader() {
 	const { t } = useTranslation();
@@ -147,17 +145,12 @@ function OverflowMenu({
 }) {
 	const { t } = useTranslation();
 	const [open, setOpen] = useState(false);
-	const [feedbackOpen, setFeedbackOpen] = useState(false);
 
 	const handleSelect = ({ action }: { action: () => void }) => {
 		setOpen(false);
 		action();
 	};
 
-	const handleFeedback = () => {
-		setOpen(false);
-		setTimeout(() => setFeedbackOpen(true), 0);
-	};
 
 	return (
 		<>
@@ -208,18 +201,8 @@ function OverflowMenu({
 						<HugeiconsIcon icon={FullScreenIcon} className="size-4" />
 						{t("Fullscreen preview")}
 					</DropdownMenuItem>
-
-					<DropdownMenuItem
-						className="flex items-center gap-2"
-						onClick={handleFeedback}
-					>
-						<HugeiconsIcon icon={BubbleChatIcon} className="size-4" />
-						{t("Feedback")}
-					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
-
-			<FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
 		</>
 	);
 }

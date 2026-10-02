@@ -17,6 +17,7 @@ export function GitHubContributeSection({
 	description: string;
 }) {
 	const { t } = useTranslation();
+	if (!SOCIAL_LINKS.github) return null;
 
 	return (
 		<div className="flex flex-col gap-6">

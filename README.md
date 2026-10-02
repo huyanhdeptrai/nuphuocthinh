@@ -1,77 +1,109 @@
 <p align="center">
-  <img src="apps/web/public/logos/lemyloi-dichvideo/logo.png" alt="Lemyloi-dichvideos logo" width="160" />
+  <img src="apps/web/public/brand/nuphuocthinh/logo.png" alt="Logo nuphuocthinh" width="140" />
 </p>
 
-<h1 align="center">Lemyloi-dichvideos</h1>
-
-<p align="center">
-  Trình chỉnh sửa video local-first dành cho quy trình nhận dạng, dịch và thuyết minh video.
-</p>
+<h1 align="center">nuphuocthinh</h1>
+<p align="center">Tool dịch videos của iemhanh</p>
+<p align="center">sản phẩm vừa lọ vừa đè tem của iemhanh</p>
 
 ## Giới thiệu
 
-Lemyloi-dichvideos lấy mã nguồn từ [Editkub](https://github.com/9teeedev/editkub) và được tinh chỉnh thêm cho quy trình làm video đa ngôn ngữ:
+**nuphuocthinh** là công cụ nhận dạng, dịch phụ đề, thuyết minh và chỉnh sửa video trên máy cá nhân.
 
-- ASR nhận dạng lời nói và quản lý cue phụ đề trên timeline.
-- OCR phụ đề gốc: quét nhanh thời gian, vị trí và kích thước subtitle xuất hiện trực tiếp trong video.
-- Dịch phụ đề, đồng bộ vị trí phụ đề/lớp phủ theo subtitle gốc.
-- Thuyết minh/TTS, quản lý giọng nói, tách lời và cân chỉnh âm thanh.
-- Chỉnh sửa timeline, lớp phủ, hiệu ứng làm mờ để che subtitle gốc.
-- Xuất/Nhập dự án `.ldvproj`: mang theo timeline, cài đặt và toàn bộ media gốc để mở trên máy khác.
-- Runtime CUDA/TTS tự dọn các file tải tạm sau khi cài thành công để không chiếm dung lượng vô ích.
+Khi mở ứng dụng, popup chào mừng hiển thị ảnh giới thiệu. Bấm **Bắt đầu dịch videos**, nút đóng hoặc Escape để vào công cụ. Popup xuất hiện lại khi mở ứng dụng hoặc tải lại trang, không xuất hiện lại khi chuyển trang trong cùng phiên giao diện.
 
-Đây là mã nguồn mở để bạn có thể **vibe code**: tự tạo ngôn ngữ phù hợp với mình, điều chỉnh giao diện/quy trình làm việc, hoặc bổ sung bất kỳ chức năng nào cần cho dự án video.
+![Giới thiệu nuphuocthinh](apps/web/public/brand/nuphuocthinh/introduction.webp)
 
-## Demo
+## Tính năng
 
-Timeline đa lớp với phụ đề gốc, bản dịch, vùng che subtitle và các track thuyết minh/TTS:
+- Nhập video và chỉnh sửa trên timeline nhiều lớp.
+- Nhận dạng lời nói bằng ASR, quét phụ đề có sẵn trong video bằng OCR.
+- Dịch phụ đề bằng Google Dịch, OpenRouter hoặc API tương thích tùy chỉnh.
+- Thuyết minh/TTS, quản lý giọng nói, clone giọng và tách âm thanh tùy runtime/nhà cung cấp được cấu hình.
+- Căn chỉnh phụ đề, che phụ đề gốc, thêm lớp phủ và hiệu ứng.
+- Xuất video; nhập/xuất dự án `.ldvproj` kèm media để sao lưu hoặc chuyển máy.
+- Chạy trên trình duyệt hoặc ứng dụng desktop Windows.
 
-![Demo Lemyloi-dichvideos editor](apps/web/public/demo/editor-workflow.png)
+## Chạy ứng dụng
 
-## Cài đặt nhanh
+Yêu cầu: Node.js và Bun. Mở terminal trong thư mục `nuphuocthinh`:
 
-Yêu cầu: [Bun](https://bun.sh/) và Node.js tương thích.
-
-```bash
-git clone https://github.com/Lexombien/lemyloi-dichvideos.git
-cd lemyloi-dichvideos
+```powershell
 bun install
 bun run dev:web
 ```
 
-Mở `http://localhost:4100`.
+Mở [http://localhost:4000](http://localhost:4000).
+
+Để chạy bản desktop trong chế độ phát triển:
+
+```powershell
+bun run dev:desktop
+```
+
+ASR/OCR/TTS chạy local có thể cần runtime Python, model và FFmpeg tương ứng. Cài các thành phần cần thiết trong giao diện hoặc dùng script trong `scripts/`; chỉ bật GPU khi máy và runtime hỗ trợ.
+
+## Quy trình sử dụng
+
+1. Đóng popup chào mừng và tạo/mở dự án.
+2. Nhập video, nhận dạng ASR hoặc OCR để lấy phụ đề.
+3. Chọn nhà cung cấp dịch và ngôn ngữ đích, rồi dịch phụ đề.
+4. Kiểm tra câu dịch và áp dụng lên timeline.
+5. Tạo thuyết minh nếu cần, căn chỉnh âm thanh và xuất video.
+6. Xuất `.ldvproj` để giữ bản sao dự án và media.
+
+### Google Dịch
+
+Lựa chọn Google Dịch dùng kết nối GTX có sẵn trong mã kế thừa, không yêu cầu nhập API key. Phụ đề được gửi tới Google khi bấm dịch. Đây không phải tích hợp Google Cloud Translation API được cấu hình bằng tài khoản riêng; kết nối có thể bị giới hạn hoặc ngừng hoạt động.
+
+Google Dịch phù hợp để dịch nhanh. Các prompt phong cách và vai nhân vật của chế độ AI không áp dụng cho lựa chọn này. Khi dịch lỗi, ứng dụng hiển thị lỗi thay vì coi câu gốc là bản dịch thành công.
 
 ## Đóng gói Windows
 
-```bash
+```powershell
 bun run dist:win
 ```
 
-Installer `.exe` được tạo trong `apps/desktop/dist/`. Bản phát hành sẵn dùng được đăng tại trang [Releases](https://github.com/Lexombien/lemyloi-dichvideos/releases).
+Bản cài đặt nằm trong `apps/desktop/dist/`. Bước chuẩn bị desktop yêu cầu runtime OCR; nếu chưa có, chạy:
 
-## Đóng góp và ủng hộ
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/prepare-ocr-runtime.ps1
+```
 
-> 🎉 Fun fact: dự án này **chưa từng nhận được donate**. Nếu nó đã giúp bạn đỡ mất công làm video, một ly cà phê nhỏ sẽ là động lực rất lớn để tiếp tục sửa bug và thêm tính năng.
+## Bố cục dự án
 
-Quét QR phù hợp với ứng dụng bạn dùng:
+| Thư mục | Nội dung |
+| --- | --- |
+| `apps/web/` | Giao diện web, editor và API |
+| `apps/desktop/` | Electron, icon Windows và cấu hình đóng gói |
+| `apps/web/public/brand/nuphuocthinh/` | Logo gốc, ảnh giới thiệu và icon PWA |
+| `apps/web/public/icons/` | Icon trình duyệt/thiết bị được tạo từ logo |
+| `apps/web/src/components/welcome-dialog.tsx` | Popup chào mừng |
+| `packages/` | Các package dùng chung |
+| `scripts/` | Script phát triển, chuẩn bị runtime và đóng gói |
 
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <strong>MoMo</strong><br />
-      <img src="apps/web/public/donate/momo-qr.png" alt="QR ủng hộ MoMo" width="260" /><br />
-      <code>0335127075</code>
-    </td>
-    <td align="center" width="50%">
-      <strong>VPBank</strong><br />
-      <img src="apps/web/public/donate/vpbank-qr.png" alt="QR ủng hộ VPBank" width="260" /><br />
-      <code>275250597</code>
-    </td>
-  </tr>
-</table>
+Tài nguyên thương hiệu:
 
-Cảm ơn anh/chị đã ủng hộ — dù là donate, góp ý, hay một ý tưởng hay để cùng vibe code. 💛
+- `apps/web/public/brand/nuphuocthinh/logo.png`
+- `apps/web/public/brand/nuphuocthinh/introduction.webp`
+- `apps/web/public/brand/nuphuocthinh/icon-512.png`
 
-## Ghi nhận mã nguồn và giấy phép
+## Dữ liệu và kết nối mạng
 
-Dự án là bản tinh chỉnh từ [Editkub](https://github.com/9teeedev/editkub), đồng thời kế thừa chuỗi mã nguồn mở của dự án gốc. Bản quyền và điều kiện [MIT License](LICENSE) của các tác giả gốc vẫn được giữ nguyên.
+Dự án/media được lưu trên thiết bị qua IndexedDB và OPFS. Ứng dụng đã gỡ tracker Tianji, gửi góp ý về tác giả, thư viện Vercel Analytics, BotID và thông tin donate.
+
+Các tính năng Google Dịch/AI cloud vẫn gửi nội dung tới nhà cung cấp khi sử dụng. GPU/TTS có thể kết nối GitHub để kiểm tra và tải runtime; font và một số tài nguyên khác cũng có thể cần mạng. Đây không phải bản hoàn toàn offline.
+
+API key phải dùng tài khoản của bạn và không đưa lên Git. Cách lưu một số key hiện tại chưa mã hóa; dùng máy cá nhân đáng tin cậy. Bản này hướng tới sử dụng local, chưa được gia cố để mở API ra Internet.
+
+Định dạng `.ldvproj`, các khóa lưu trữ, biến môi trường cũ và thư mục dữ liệu desktop `Lemyloi-dichvideo` được giữ tương thích để tiếp tục mở dự án và runtime đã có. Những định danh kỹ thuật này không phải tracker.
+
+## Kiểm tra
+
+```powershell
+bun test apps/web/src/dubbing/services/translation.test.ts apps/web/src/services/storage/project-package.test.ts apps/web/src/dubbing/server/runtime-paths.test.ts
+```
+
+## Nguồn mã và giấy phép
+
+Mã nền kế thừa từ Lemyloi-dichvideos, Editkub, msgbyte/cutia và OpenCut. Các thông báo bản quyền và điều kiện MIT của mã kế thừa được giữ trong [LICENSE](LICENSE). Giấy phép riêng của thư viện, model, giọng nói và dịch vụ bên thứ ba vẫn áp dụng.
